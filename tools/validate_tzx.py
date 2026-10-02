@@ -5,6 +5,7 @@ import argparse, collections, struct
 
 ROM_PILOTS = [512, 512]
 FAST_LEADER = 256
+FAST_LEADER_PULSE = 1710
 ZERO = 855
 ONE = 1710
 BYTE_DELAY = 64
@@ -70,6 +71,8 @@ def validate(path):
         run += 1
     if run != FAST_LEADER:
         raise SystemExit(f"{path}: fast leader has {run} pulses, expected {FAST_LEADER}")
+    if first != FAST_LEADER_PULSE:
+        raise SystemExit(f"{path}: fast leader pulse is {first} T-states, expected {FAST_LEADER_PULSE}")
     counts = collections.Counter(pulses[run:])
     for p in (ZERO, ONE):
         if counts[p] == 0:

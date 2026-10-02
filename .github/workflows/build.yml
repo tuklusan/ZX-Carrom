@@ -90,8 +90,10 @@ jobs:
       - name: Runtime tape and play checks
         run: |
           cp build/carrom.sym tools/carrom.sym
-          /tmp/zxrun/bin/tap2sna.py -c fast-load=0 -c accelerator=none -c cmio=1 -c pause=0 --start 32768 dist/carrom.tap /tmp/carrom_std.z80
-          /tmp/zxrun/bin/tap2sna.py -c fast-load=0 -c accelerator=none -c cmio=1 -c pause=0 -c in-flags=1 --start 32768 dist/carrom_fast.tzx /tmp/carrom_fast.z80
+          /tmp/zxrun/bin/tap2sna.py -c fast-load=0 -c accelerator=none -c cmio=1 -c pause=0 --start 32768 dist/carrom.tap /tmp/carrom_std.z80 2>&1 | tee /tmp/std-load.log
+          grep -Fq 'Simulation stopped (PC at start address): PC=32768' /tmp/std-load.log
+          /tmp/zxrun/bin/tap2sna.py -c fast-load=0 -c accelerator=none -c cmio=1 -c pause=0 -c in-flags=1 --start 32768 dist/carrom_fast.tzx /tmp/carrom_fast.z80 2>&1 | tee /tmp/fast-load.log
+          grep -Fq 'Simulation stopped (PC at start address): PC=32768' /tmp/fast-load.log
           /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_std.z80 --secs 90 --prefix /tmp/std --shots 10,30,65,90
           /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_fast.z80 --secs 20 --prefix /tmp/fast --shots 10,20
 

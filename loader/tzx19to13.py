@@ -12,6 +12,7 @@ import sys, struct
 
 SHORT_ROM_PILOT = 512
 SHORT_FAST_LEADER = 256
+FAST_LEADER_PULSE = 1710
 
 def u16(b, o): return struct.unpack_from('<H', b, o)[0]
 def u32(b, o): return struct.unpack_from('<I', b, o)[0]
@@ -71,8 +72,8 @@ def shorten_leader(pulses, limit=SHORT_FAST_LEADER):
     run = 1
     while run < len(pulses) and pulses[run] == first:
         run += 1
-    if run > limit:
-        return pulses[:limit] + pulses[run:]
+    if run >= limit:
+        return [FAST_LEADER_PULSE] * limit + pulses[run:]
     return pulses
 
 def emit_pulses(out, pulses):
