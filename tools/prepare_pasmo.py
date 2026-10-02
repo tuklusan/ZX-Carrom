@@ -101,8 +101,19 @@ def dot_locals(lines):
     return out
 
 
+def pasmo_expressions(lines):
+    """Translate expression operators that Pasmo spells differently."""
+    out=[]
+    for line in lines:
+        code, sep, comment = line.partition(';')
+        # Pasmo supports <<, >> and |, but bitwise AND is the word AND.
+        code = code.replace('&', ' AND ')
+        out.append(code + (sep + comment if sep else ''))
+    return out
+
+
 def normalize(lines):
-    return dot_locals(numeric_locals(strip_sjasm(lines)))
+    return dot_locals(numeric_locals(pasmo_expressions(strip_sjasm(lines))))
 
 
 def main():
