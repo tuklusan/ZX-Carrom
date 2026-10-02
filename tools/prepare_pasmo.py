@@ -108,6 +108,27 @@ def pasmo_expressions(lines):
         code, sep, comment = line.partition(';')
         # Pasmo supports <<, >> and |, but bitwise AND is the word AND.
         code = code.replace('&', ' AND ')
+        # Pasmo ships ALIGN as an example macro rather than a built-in directive.
+        # Expand the simple constant alignments used by the game deterministically.
+        m = re.match(r'^(\s*)align\s+(.+?)\s*    return out
+
+
+def normalize(lines):
+    return dot_locals(numeric_locals(pasmo_expressions(strip_sjasm(lines))))
+
+
+def main():
+    dest=Path(sys.argv[1]) if len(sys.argv)>1 else ROOT/'build'/'carrom_pasmo.asm'
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    lines=normalize(flatten(SRC/'carrom.asm'))
+    dest.write_text('\n'.join(lines)+'\n')
+    print(dest)
+
+if __name__=='__main__': main()
+, code, re.I)
+        if m:
+            indent, n = m.groups()
+            code = f'{indent}ORG (($ + ({n}) - 1) / ({n})) * ({n})'
         out.append(code + (sep + comment if sep else ''))
     return out
 
