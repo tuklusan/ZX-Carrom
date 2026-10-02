@@ -241,6 +241,10 @@ def main():
         upper_addr_exports = [
             'HEADER', 'LOAD_HEADER_PLUS_DATA', 'COPY_ME', 'PRINT',
             'TEXT_CHECKSUM_ERROR', 'TEXT_ERROR',
+            'm_checksum', 'm_clear_address', 'm_compression_type',
+            'm_decompress_counter', 'm_dest_address', 'm_length',
+            'm_load_address', 'm_usr_start_address',
+            'm_code_for_most', 'm_code_for_multiples', 'm_value_for_most',
         ]
         missing=[k for k in upper_addr_exports + ['HEADER_LEN'] if k not in usyms0]
         if missing:
