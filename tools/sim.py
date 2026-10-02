@@ -83,6 +83,7 @@ def main():
     protected_ref = None
     protected_clean = False
     east_margin_clean = True
+    east_base_clean = True
     east_attr_clean = True
     small_game_title = False
     play_msgs = 0
@@ -91,7 +92,7 @@ def main():
     def draw(scr, frame, border, kb):
         nonlocal song_prev, song_wraps, pause_ref, pause_frozen, pause_resumed, restart_seen
         nonlocal intro_prompt, ribbon_intro, ribbon_game, protected_ref, protected_clean
-        nonlocal east_margin_clean, east_attr_clean, small_game_title
+        nonlocal east_margin_clean, east_base_clean, east_attr_clean, small_game_title
         now_s = (regs[T] - t0) / 3500000
         for i in range(8): kb[i] = 0
         if a.nogroove: mem[sym['gm_run']] = 0
@@ -147,6 +148,11 @@ def main():
                     aa=paddr(xb,yy)
                     if mem[aa] != mem[aa+off]:
                         east_margin_clean = False
+                for xb in range(27,32):
+                    aa=paddr(xb,yy)+off
+                    expected=0xF0 if xb == 31 and 80 <= yy < 112 else 0
+                    if mem[aa] != expected:
+                        east_base_clean = False
             ribbon_attrs=(0x42,0x46,0x44,0x45)
             for ar in range(3,21):
                 for xb in range(28,32):
@@ -265,7 +271,7 @@ def main():
             'screen clean': stray_total == 0,
             'small flashing intro': intro_prompt,
             'spectrum ribbon': ribbon_intro and ribbon_game,
-            'protected HUD/ribbon': protected_clean and east_margin_clean and east_attr_clean,
+            'protected HUD/ribbon': protected_clean and east_margin_clean and east_base_clean and east_attr_clean,
             'small game title': small_game_title,
             'space parallax': star_changes[2] > star_changes[1] > star_changes[0] >= 10,
         }

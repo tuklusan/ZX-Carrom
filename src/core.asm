@@ -440,6 +440,7 @@ star_prepare:
         ld a,e
         add a,22
         ld e,a
+        xor a
         ld b,5
 .prep_r:
         ld (de),a
