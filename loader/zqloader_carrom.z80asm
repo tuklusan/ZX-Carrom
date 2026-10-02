@@ -2,10 +2,8 @@
 // Carrom Arena ZX: ZQLoader (https://github.com/tuklusan/zqloader, MIT licence,
 // Copyright (c) 2025 Daan Scherft [Oxidaan]) adapted to live inside the game's own
 // BASIC loader.  Changes from upstream zqloader.z80asm:
-//   - the BASIC is the Carrom Arena title page (zq_basic.inc, written by mktap.py),
-//     then RANDOMIZE USR ASM_START, then RANDOMIZE USR 32768, then the REM with this code
-//     (written by hand here, so BasicLib is not needed);
-//   - no CLS on entry, so the title page stays up while the turbo blocks load;
+//   - the BASIC contains the loader entry and this machine code in a REM;
+//   - the first fast payload is a full loading SCREEN$; the next payload is the game;
 //   - waits for ENTER to be released before listening (ENTER is the loader's BREAK key,
 //     and under emulator tape traps the ENTER of LOAD "" may still be held);
 //   - host build uses a short leader and exact 2x ROM bit timing with no silent gap.
@@ -100,7 +98,7 @@ NUM2   MACRO	value
 
 TOTAL_START:        // = PROG
 BASIC_START:
-        INCLUDE "zq_basic.inc"          // title page, USR ASM_START, USR 32768
+        INCLUDE "zq_basic.inc"          // loader entry; fast payload supplies SCREEN$ and game
         db 0, 200                       // 200 REM <the loader>
         dw REM_LINE_END - REM_LINE_BEGIN
 REM_LINE_BEGIN:
@@ -131,8 +129,6 @@ BASIC_LEN EQU BASIC_END - BASIC_START
     // ===========================================================================
 
 ASM_START:
-    // clear screen & print a message
-    // (no CLS: the Carrom Arena title page stays on screen while loading)
     // Wait for ENTER to be released first: the loader treats ENTER as BREAK, and with an
     // emulator's tape traps the BASIC loads instantly, so the ENTER of LOAD "" can still be
     // down when we get here (that aborted the load with "ERROR").
@@ -158,9 +154,6 @@ ASM_START:
     ld BC, ASM_UPPER_LEN            
     ldir
 
-    ld DE, TEXT_LOADING
-    call PRINT                  // visible turbo loading banner
-    
     // initialize
     di                          // #di1          
     exx                     
@@ -289,7 +282,8 @@ call_usr:
     ld SP, HL                   // put SP at CLEAR address.
     ex DE, HL
     ei                          // #di1 (this is needed for a game like Galaxians)
-go_go_go:   
+go_go_go:
+    ld SP, (STACK_SAVE)         // let the game save BASIC's return stack before it installs its own
     // ld A , 255                 // @DEBUG have some visible feedback
     // ld (16385), A              // @DEBUG have some visible feedback
     // ld B, H                    // @DEBUG show HL in basic
@@ -460,8 +454,6 @@ PRINT:
 
 //----------------------------------------------------------------------------
 
-TEXT_LOADING:
-    db " CARROM ARENA - TURBO LOADIN",199
 TEXT_CHECKSUM_ERROR :
     DC "CRC "
 TEXT_ERROR :

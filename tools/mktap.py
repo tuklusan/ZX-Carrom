@@ -1,92 +1,154 @@
 #!/usr/bin/env python3
-"""Build carrom.tap: a BASIC loader (title page + keys) followed by the machine code."""
+"""Build the standard tape and the turbo host-input tape."""
 import os, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+SRC = os.path.join(os.path.dirname(HERE), 'src')
+sys.path.insert(0, SRC)
+import font64
+
 T = {'CLEAR': 0xFD, 'BORDER': 0xE7, 'PAPER': 0xDA, 'INK': 0xD9, 'BRIGHT': 0xDC, 'CLS': 0xFB,
-     'PRINT': 0xF5, 'AT': 0xAC, 'LOAD': 0xEF, 'CODE': 0xAF, 'RANDOMIZE': 0xF9, 'USR': 0xC0,
-     'FLASH': 0xDB}
+     'LOAD': 0xEF, 'CODE': 0xAF, 'SCREEN': 0xAA, 'RANDOMIZE': 0xF9, 'USR': 0xC0}
 
 def num(n):
-    """A number literal: its digits followed by the hidden 5-byte small-integer form."""
     return str(n).encode() + bytes([0x0E, 0, 0, n & 255, n >> 8, 0])
 
 def line(no, *parts):
-    body = b''
+    body=b''
     for p in parts:
-        if isinstance(p, int):
-            body += bytes([p])
-        elif isinstance(p, bytes):
-            body += p
-        else:
-            body += p.encode('ascii')
+        if isinstance(p,int): body += bytes([p])
+        elif isinstance(p,bytes): body += p
+        else: body += p.encode('ascii')
     body += b'\r'
-    return bytes([no >> 8, no & 255, len(body) & 255, len(body) >> 8]) + body
+    return bytes([no>>8,no&255,len(body)&255,len(body)>>8])+body
 
-def q(s):
-    return '"' + s + '"'
+def q(s): return '"'+s+'"'
 
-def at(r, c):
-    return bytes([T['AT']]) + num(r) + b',' + num(c) + b';'
+def pixoff(x,y):
+    return ((y & 0xC0) << 5) | ((y & 7) << 8) | ((y & 0x38) << 2) | (x >> 3)
 
-title_lines = [
-    line(10, T['CLEAR'], num(32767)),
-    line(20, T['BORDER'], num(0), ':', T['PAPER'], num(0), ':', T['INK'], num(7), ':',
-         T['BRIGHT'], num(0), ':', T['CLS']),
-    line(30, T['PRINT'], at(2, 5), T['INK'], num(6), ';', q("C A R R O M   A R E N A")),
-    line(40, T['PRINT'], at(4, 3), T['INK'], num(5), ';', q("ZX Spectrum 48K machine code")),
-    line(50, T['PRINT'], at(5, 8), q("SANYALnet Labs 2026")),
-    line(60, T['PRINT'], at(8, 1), q("Four robots play doubles carrom"),
-         b';' + bytes([T['AT']]) + num(9), b',', num(1), b';', q("under ICF rules. Just watch!")),
-    line(70, T['PRINT'], at(11, 1), T['INK'], num(4), ';', q("RED (N/S) v BLUE (E/W)"),
-         b';' + bytes([T['AT']]) + num(12), b',', num(1), b';', q("N aggressive  E balanced"),
-         b';' + bytes([T['AT']]) + num(13), b',', num(1), b';', q("S defensive   W trickster")),
-    line(80, T['PRINT'], at(15, 1), q("SPACE pause    F  fast/normal"),
-         b';' + bytes([T['AT']]) + num(16), b',', num(1), b';', q("M     sound    R  new match"),
-         b';' + bytes([T['AT']]) + num(17), b',', num(1), b';', q("Q     quit to BASIC")),
-    line(85, T["PRINT"], at(6, 1), T['INK'], num(5), ';', q("Music: nanobeep / utz + Carrom groove")),
-    line(90, T['PRINT'], at(19, 9), T['FLASH'], num(1), ';', q(" LOADING ")),
-]
-prog = b''.join(title_lines + [
-    line(100, T['LOAD'], q(""), T['CODE']),
-    line(110, T['RANDOMIZE'], T['USR'], num(32768)),
+def make_screen():
+    s=bytearray(6912)
+    glyphs=font64.build()
+
+    def pset(x,y):
+        if 0 <= x < 256 and 0 <= y < 192:
+            s[pixoff(x,y)] |= 0x80 >> (x & 7)
+
+    def hline(x0,x1,y):
+        for x in range(x0,x1+1): pset(x,y)
+
+    def vline(x,y0,y1):
+        for yy in range(y0,y1+1): pset(x,yy)
+
+    def box(x0,y0,x1,y1):
+        hline(x0,x1,y0); hline(x0,x1,y1); vline(x0,y0,y1); vline(x1,y0,y1)
+
+    def ring(cx,cy,r):
+        rr=r*r
+        for y in range(cy-r-1,cy+r+2):
+            for x in range(cx-r-1,cx+r+2):
+                d=(x-cx)*(x-cx)+(y-cy)*(y-cy)
+                if rr-r <= d <= rr+r: pset(x,y)
+
+    def text(x,y,msg,scale=1):
+        for ch in msg:
+            code=ord(ch)
+            if not 32 <= code < 128: code=32
+            g=glyphs[(code-32)*8:(code-31)*8]
+            for gy,row in enumerate(g):
+                for gx in range(3):
+                    if row & (0x80 >> gx):
+                        for yy in range(scale):
+                            for xx in range(scale):
+                                pset(x+gx*scale+xx,y+gy*scale+yy)
+            x += 4*scale
+
+    def centre(y,msg,scale=1):
+        text((256-len(msg)*4*scale)//2,y,msg,scale)
+
+    box(3,3,252,188)
+    centre(8,"CARROM ARENA",2)
+    centre(28,"ZX SPECTRUM 48K",1)
+    centre(38,"FOUR ROBOTS - DOUBLES CARROM",1)
+
+    box(77,50,178,128)
+    box(83,56,172,122)
+    for cx,cy in ((84,57),(171,57),(84,121),(171,121)): ring(cx,cy,6)
+    ring(128,89,12); ring(128,89,3)
+    hline(100,156,89); vline(128,70,108)
+
+    for x,y in ((112,78),(122,82),(133,79),(116,92),(128,89),(138,94),(124,100)):
+        ring(x,y,2)
+
+    centre(132,"LOADING MATCH...",1)
+    text(12,146,"SPACE PAUSE/RESUME")
+    text(156,146,"F FAST/NORMAL")
+    text(12,158,"M SOUND MODE")
+    text(156,158,"R NEW MATCH")
+    centre(174,"Q QUIT TO BASIC",1)
+
+    attrs=[
+        (0,4,0x4F),
+        (4,17,0x47),
+        (17,24,0x46),
+    ]
+    for y0,y1,a in attrs:
+        for row in range(y0,y1):
+            for col in range(32):
+                s[6144+row*32+col]=a
+    for row in range(6,16):
+        for col in range(9,23):
+            s[6144+row*32+col]=0x45
+    return bytes(s)
+
+def block(flag,data):
+    payload=bytes([flag])+data
+    chk=0
+    for b in payload: chk ^= b
+    payload += bytes([chk])
+    return len(payload).to_bytes(2,'little')+payload
+
+def header(typ,name,length,p1,p2):
+    nm=name.ljust(10)[:10].encode('ascii')
+    return block(0x00,bytes([typ])+nm+length.to_bytes(2,'little')+p1.to_bytes(2,'little')+p2.to_bytes(2,'little'))
+
+bin_path=sys.argv[1] if len(sys.argv)>1 else os.path.join(HERE,'carrom.bin')
+out=sys.argv[2] if len(sys.argv)>2 else os.path.join(HERE,'carrom.tap')
+loader_dir=sys.argv[3] if len(sys.argv)>3 else os.path.join(HERE,'zq')
+os.makedirs(loader_dir,exist_ok=True)
+
+code=open(bin_path,'rb').read()
+screen=make_screen()
+prog=b''.join([
+    line(10,T['CLEAR'],num(32767)),
+    line(20,T['BORDER'],num(0),':',T['PAPER'],num(0),':',T['INK'],num(7),':',T['BRIGHT'],num(0),':',T['CLS']),
+    line(30,T['LOAD'],q(""),T['SCREEN']),
+    line(40,T['LOAD'],q(""),T['CODE']),
+    line(50,T['RANDOMIZE'],T['USR'],num(32768)),
 ])
 
-def block(flag, data):
-    payload = bytes([flag]) + data
-    chk = 0
-    for b in payload:
-        chk ^= b
-    payload += bytes([chk])
-    return len(payload).to_bytes(2, 'little') + payload
+screen_pair=header(3,'CarromScr',len(screen),16384,32768)+block(0xFF,screen)
+code_pair=header(3,'carrom',len(code),32768,32768)+block(0xFF,code)
+tap=header(0,'CarromZX',len(prog),10,len(prog))+block(0xFF,prog)+screen_pair+code_pair
+open(out,'wb').write(tap)
+open(os.path.join(loader_dir,'loading.scr'),'wb').write(screen)
 
-def header(typ, name, length, p1, p2):
-    nm = name.ljust(10)[:10].encode('ascii')
-    return block(0x00, bytes([typ]) + nm + length.to_bytes(2, 'little') +
-                 p1.to_bytes(2, 'little') + p2.to_bytes(2, 'little'))
+zq=[
+    "; generated by mktap.py: resident loader starts immediately",
+    "        db 0,10,10,0,0xF9,0xC0,'0',0x0E,0,0",
+    "        dw ASM_START",
+    "        db 0,0x0D",
+]
+open(os.path.join(loader_dir,'zq_basic.inc'),'w').write("\n".join(zq)+"\n")
 
-bin_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, 'carrom.bin')
-code = open(bin_path, 'rb').read()
-tap = header(0, 'CarromZX', len(prog), 10, len(prog)) + block(0xFF, prog)
-tap += header(3, 'carrom', len(code), 32768, 32768) + block(0xFF, code)
-# the turbo edition jumps straight to the resident loader so the zero-gap
-# fast leader is still present when the loader starts listening.
-zq = ["; generated by mktap.py: direct loader entry before the REM line"]
-zq += ["        db 0,10,10,0,0xF9,0xC0,'0',0x0E,0,0   ; 10 RANDOMIZE USR ASM_START",
-       "        dw ASM_START", "        db 0,0x0D"]
-for ln in [line(20, T['RANDOMIZE'], T['USR'], num(32768))]:
-    for i in range(0, len(ln), 32):
-        zq.append("        db " + ",".join(str(x) for x in ln[i:i + 32]))
-loader_dir = sys.argv[3] if len(sys.argv) > 3 else os.path.join(HERE, 'zq')
-os.makedirs(loader_dir, exist_ok=True)
-open(os.path.join(loader_dir, 'zq_basic.inc'), 'w').write("\n".join(zq) + "\n")
-# what ZQLoader's host tool turbo-loads: CLEAR + LOAD ""CODE, no USR, so the loader returns to
-# our BASIC (line 110 starts the game, and Q can still quit back to BASIC)
-zprog = line(10, T['CLEAR'], num(32767)) + line(20, T['LOAD'], q(""), T['CODE'])
-codetap = (header(0, 'CarromZX', len(zprog), 10, len(zprog)) + block(0xFF, zprog) +
-           header(3, 'carrom', len(code), 32768, 32768) + block(0xFF, code))
-open(os.path.join(loader_dir, 'carrom_code.tap'), 'wb').write(codetap)
+host_prog=b''.join([
+    line(10,T['CLEAR'],num(32767)),
+    line(20,T['LOAD'],q(""),T['SCREEN']),
+    line(30,T['LOAD'],q(""),T['CODE']),
+    line(40,T['RANDOMIZE'],T['USR'],num(32768)),
+])
+host_tap=(header(0,'CarromZX',len(host_prog),10,len(host_prog))+block(0xFF,host_prog)+screen_pair+code_pair)
+open(os.path.join(loader_dir,'carrom_code.tap'),'wb').write(host_tap)
 
-out = sys.argv[2] if len(sys.argv) > 2 else os.path.join(HERE, 'carrom.tap')
-open(out, 'wb').write(tap)
-print(f"{out}: BASIC {len(prog)} bytes, code {len(code)} bytes, tape {len(tap)} bytes")
+print(f"{out}: BASIC {len(prog)} bytes, SCREEN {len(screen)} bytes, code {len(code)} bytes, tape {len(tap)} bytes")

@@ -240,7 +240,7 @@ def main():
         # Symbols from the relocated upper block that are consumed by lower code.
         upper_addr_exports = [
             'HEADER', 'LOAD_HEADER_PLUS_DATA', 'COPY_ME', 'PRINT',
-            'TEXT_LOADING', 'TEXT_CHECKSUM_ERROR', 'TEXT_ERROR',
+            'TEXT_CHECKSUM_ERROR', 'TEXT_ERROR',
             'm_checksum', 'm_clear_address', 'm_compression_type',
             'm_decompress_counter', 'm_dest_address', 'm_length',
             'm_load_address', 'm_usr_start_address',
