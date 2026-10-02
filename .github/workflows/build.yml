@@ -29,11 +29,10 @@ jobs:
         run: |
           git clone https://github.com/tuklusan/pasmo.git /tmp/pasmo
           git -C /tmp/pasmo checkout "$PASMO_REF"
-          g++ -O2 -std=c++11 -o /tmp/pasmo/pasmo \
-            /tmp/pasmo/asm.cpp /tmp/pasmo/asmfile.cpp /tmp/pasmo/cpc.cpp \
-            /tmp/pasmo/pasmo.cpp /tmp/pasmo/pasmotypes.cpp /tmp/pasmo/spectrum.cpp \
-            /tmp/pasmo/tap.cpp /tmp/pasmo/token.cpp /tmp/pasmo/trace.cpp /tmp/pasmo/tzx.cpp
-          /tmp/pasmo/pasmo --version || true
+          cd /tmp/pasmo
+          ./configure
+          make -j2
+          ./pasmo --version || true
 
       - name: Build ZQLoader host tool
         run: |
