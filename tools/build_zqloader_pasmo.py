@@ -58,20 +58,25 @@ def strip_comment(line):
 
 
 def transform_plusstar(line):
-    m = re.match(r'^(\s*)([A-Za-z_][A-Za-z0-9_]*)\+\*:\s*(ld|jp)\s+([^,\s]+)(?:\s*,\s*(.+))?$', line, re.I)
+    m = re.match(r'^(\s*)([A-Za-z_][A-Za-z0-9_]*)\+\*:\s*(ld|jp)\s+(.+)$', line, re.I)
     if not m:
         return [line]
-    indent, label, op, a, b = m.groups()
-    op = op.lower(); au = a.upper()
-    if op == 'ld' and b is not None:
+    indent, label, op, operands = m.groups()
+    op = op.lower()
+    if op == 'ld':
+        if ',' not in operands:
+            raise SystemExit(f'unsupported +* patch site: {line}')
+        a, b = (x.strip() for x in operands.split(',', 1))
+        au = a.upper()
         op8 = {'C':0x0E, 'H':0x26, 'D':0x16}
-        op16 = {'SP':0x31, 'DE':0x11, 'HL':0x21, 'IX':None, 'IY':None}
+        op16 = {'SP':0x31, 'DE':0x11, 'HL':0x21}
         if au in op8:
             return [f'{indent}db 0x{op8[au]:02X}', f'{label}: db {b}']
-        if au in op16 and op16[au] is not None:
+        if au in op16:
             return [f'{indent}db 0x{op16[au]:02X}', f'{label}: dw {b}']
-    if op == 'jp' and b is None:
-        return [f'{indent}db 0xC3', f'{label}: dw {a}']
+    elif op == 'jp':
+        # JP nn is opcode C3 followed by the little-endian destination word.
+        return [f'{indent}db 0xC3', f'{label}: dw {operands.strip()}']
     raise SystemExit(f'unsupported +* patch site: {line}')
 
 
