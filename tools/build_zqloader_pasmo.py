@@ -204,33 +204,59 @@ def main():
 
     with tempfile.TemporaryDirectory(prefix='zqpasmo-') as t:
         td=Path(t)
-        # Lower probe gives addresses/constants needed while sizing upper code.
-        lower_probe='\n'.join([
-            'ASM_UPPER_START EQU 0xFF00',
-            'ASM_UPPER_LEN EQU 0x0100',
-            'REM_PAYLOAD_LEN EQU 0',
-            *lower, ''
-        ])
-        lprobe, lsyms0, _=assemble(a.pasmo, lower_probe, 'lower_probe', td)
 
+        # The original source uses SjASMPlus DISP: lower/control code lives in
+        # the BASIC REM area, while the trailing loader block is assembled as
+        # if it were copied to the top of RAM.  There are references in both
+        # directions, so reproduce that link in deterministic Pasmo passes.
+        probe_org = 0x8000
+        upper_probe_preamble = [
+            'SCREEN_23RD EQU 0x5000',
+            'STACK_SIZE EQU 10',
+            'ASM_CONTROL_CODE_START EQU 0x6000',
+            'ASM_CONTROL_CODE_LEN EQU 0x0100',
+            'LEADER_MIN_EDGES EQU 200',
+            'LEADER_MAX EQU 12',
+            'LEADER_MIN EQU 8',
+            'SYNC_MIN EQU 4',
+            'ONE_MAX EQU 12',
+            'ZERO_MAX EQU 3',
+        ]
         upper_probe='\n'.join([
-            *eq_lines(lsyms0, exclude={'ASM_UPPER_START','ASM_UPPER_LEN','ASM_UPPER_START_OFFSET'}),
-            'ORG 0x8000',
+            *upper_probe_preamble,
+            f'ORG 0x{probe_org:04X}',
             'ASM_UPPER_START:',
             *upper,
             'ASM_UPPER_END:',
             ''
         ])
-        uprobe, _, _=assemble(a.pasmo, upper_probe, 'upper_probe', td)
+        uprobe, usyms0, _=assemble(a.pasmo, upper_probe, 'upper_probe', td)
         upper_len=len(uprobe)
         upper_start=0x10000-upper_len
         if upper_start < 0xC000:
             raise SystemExit(f'ZQLoader upper part too large: {upper_len} bytes')
 
+        # Symbols from the relocated upper block that are consumed by lower code.
+        upper_addr_exports = [
+            'HEADER', 'LOAD_HEADER_PLUS_DATA', 'COPY_ME', 'PRINT',
+            'TEXT_CHECKSUM_ERROR', 'TEXT_ERROR',
+        ]
+        missing=[k for k in upper_addr_exports + ['HEADER_LEN'] if k not in usyms0]
+        if missing:
+            raise SystemExit('upper probe missing symbol(s): '+', '.join(missing))
+        upper_exports={
+            k: upper_start + (usyms0[k] - probe_org) for k in upper_addr_exports
+        }
+        upper_exports['HEADER_LEN']=usyms0['HEADER_LEN']
+        upper_eq=[f'{k} EQU 0x{v:04X}' for k,v in sorted(upper_exports.items())]
+
+        # First lower pass establishes real control-code addresses and the
+        # physical offset where the upper bytes begin in the REM payload.
         lower_pass='\n'.join([
             f'ASM_UPPER_START EQU 0x{upper_start:04X}',
             f'ASM_UPPER_LEN EQU 0x{upper_len:04X}',
             'REM_PAYLOAD_LEN EQU 0',
+            *upper_eq,
             *lower, ''
         ])
         lbin0, lsyms1, _=assemble(a.pasmo, lower_pass, 'lower_pass', td)
@@ -243,6 +269,7 @@ def main():
             f'ASM_UPPER_START EQU 0x{upper_start:04X}',
             f'ASM_UPPER_LEN EQU 0x{upper_len:04X}',
             f'REM_PAYLOAD_LEN EQU 0x{rem_len:04X}',
+            *upper_eq,
             *lower, ''
         ])
         lbin, lsyms, lasm=assemble(a.pasmo, lower_final, 'lower_final', td)
@@ -252,8 +279,15 @@ def main():
         if lsyms['ASM_UPPER_START_OFFSET'] != start_offset:
             raise SystemExit('ASM_UPPER_START_OFFSET symbol mismatch')
 
+        # Now assemble upper code at its true runtime address with the actual
+        # lower/control symbols. Do not re-import upper-owned symbols that the
+        # lower pass knew only as EQU exports.
+        upper_owned=set(upper_exports)
         upper_final='\n'.join([
-            *eq_lines(lsyms, exclude={'ASM_UPPER_START','ASM_UPPER_LEN','ASM_UPPER_START_OFFSET','REM_PAYLOAD_LEN'}),
+            *eq_lines(lsyms, exclude={
+                'ASM_UPPER_START','ASM_UPPER_LEN','ASM_UPPER_START_OFFSET',
+                'REM_PAYLOAD_LEN', *upper_owned
+            }),
             f'ASM_UPPER_START_OFFSET EQU 0x{start_offset:04X}',
             f'ASM_UPPER_LEN EQU 0x{upper_len:04X}',
             f'ORG 0x{upper_start:04X}',
@@ -265,6 +299,12 @@ def main():
         ubin, usyms, uasm=assemble(a.pasmo, upper_final, 'upper_final', td)
         if len(ubin)!=upper_len or usyms['ASM_UPPER_START']!=upper_start:
             raise SystemExit('upper loader final assembly mismatch')
+        for k,v in upper_exports.items():
+            if k == 'HEADER_LEN':
+                if usyms.get(k) != v:
+                    raise SystemExit(f'upper symbol changed after final link: {k}')
+            elif usyms.get(k) != v:
+                raise SystemExit(f'upper relocation mismatch for {k}: 0x{usyms.get(k,0):04X} != 0x{v:04X}')
 
         payload=lbin+ubin+b'\r'
         if len(payload)!=total_len:
