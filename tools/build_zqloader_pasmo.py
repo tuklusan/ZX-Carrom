@@ -102,6 +102,14 @@ def normalize(lines):
         line=line.replace('"ERROR\\r"', '"ERROR",13')
         line=line.replace('"DEBUG\\r"', '"DEBUG",13')
         line=re.sub(r'^(\s*)([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$', r'\1\2 EQU \3', line)
+        # SjASMPlus permits `label+1:` to export the immediate operand of an
+        # instruction.  The 48K loader uses this once for CP n; spell out that
+        # opcode so Pasmo can give the patch byte an ordinary label.
+        m_cp = re.match(r'^(\s*)(\.[A-Za-z_][A-Za-z0-9_]*)\+1:\s*cp\s+(.+)$', line, re.I)
+        if m_cp:
+            indent, label, value = m_cp.groups()
+            out.extend([f'{indent}db 0xFE', f'{label}: db {value}'])
+            continue
         out.extend(transform_plusstar(line))
     # Dot locals: scope them to the nearest preceding explicit global label.
     scope='TOP'; serial=0; final=[]
