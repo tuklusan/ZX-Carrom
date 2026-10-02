@@ -275,15 +275,12 @@ copy_done:
     // -- HL is start address as in RANDOMIZE USR xxxxx --
     // -- DE is address as in CLEAR xxxxx. (basically the SP) --
 call_usr:
-    ld A,D                      // when not 0 do m_clear_address -> SP (needed at zqloader_test!)
-    or E
-    jr z, go_go_go
-    ex DE, HL                   // This is ld SP, DE
-    ld SP, HL                   // put SP at CLEAR address.
-    ex DE, HL
-    ei                          // #di1 (this is needed for a game like Galaxians)
+    // Keep the loader's private stack.  The game saves this SP on entry and
+    // installs its own stack; Q restores it and RETurns through END_TO_BASIC.
+    ld DE, END_TO_BASIC
+    push DE
+    ei
 go_go_go:
-    ld SP, (STACK_SAVE)         // let the game save BASIC's return stack before it installs its own
     // ld A , 255                 // @DEBUG have some visible feedback
     // ld (16385), A              // @DEBUG have some visible feedback
     // ld B, H                    // @DEBUG show HL in basic

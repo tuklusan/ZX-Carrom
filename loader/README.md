@@ -16,4 +16,4 @@ The previous known-good bootstrap is not used or shipped as current output. Its 
 
 The production host settings are 855 T-states for a zero and 1710 T-states for a one, exactly half the usual ROM data pulse timing. Payload compression is disabled for this release path so a zero-gap transition never depends on finishing a decompression pass before the next leader. The no-gap layout and short 256-pulse fast leader must pass emulator tape-playback acceptance before release.
 
-The resident loader is embedded in BASIC. It first receives the shared 6912-byte loading SCREEN$ at 16384, then the game bytes at 32768, then transfers control to 32768. The standard tape presents the same screen and game sequence using the ROM loader instead.
+The resident loader is embedded in BASIC. It first receives the shared 6912-byte loading SCREEN$ at 16384, then the game bytes at 32768, then jumps to 32768. Before that jump it places its normal BASIC cleanup path on the private stack, so the game's Q return restores loader state and reaches BASIC cleanly. The standard tape presents the same screen and game sequence using the ROM loader instead.
