@@ -668,6 +668,8 @@ gm_hi:          db 0
 gm_lo:          dw 0
 ; text
 c64_pad:        db 0
+title_x:        db 0
+title_bits:     db 0
 nd_d:           ds 3
 BODIES:         ds NB*BSZ
 vars_end:

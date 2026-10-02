@@ -451,6 +451,25 @@ star_prepare:
         cp 168
         jr c,.prep_row
 
+        ; the old picture used light paper here.  The moving stars XOR
+        ; pixels in columns 28..30, so make their whole lane black-backed.
+        ; Column 31 is the ribbon lane and is black except for its four blocks.
+        ld hl,0xF800+3*32+28
+        ld b,18
+.attr_row:
+        ld a,0x47
+        ld (hl),a
+        inc hl
+        ld (hl),a
+        inc hl
+        ld (hl),a
+        inc hl
+        ld (hl),a
+        inc hl
+        ld de,28
+        add hl,de
+        djnz .attr_row
+
         ; four 4x8 colour blocks at the far-right screen edge
         ld c,80
         ld b,32
@@ -921,10 +940,112 @@ center64:
         jr c,.col
         ret
 
+; five-pixel title face sampled from the supplied tape's fixed screen raster
 draw_title64:
+        ; remove the packed picture's original top-line lettering first
+        ld c,0
+.clr_y:
+        push bc
+        call row_de
+        xor a
+        ld b,32
+.clr_b:
+        ld (de),a
+        inc e
+        djnz .clr_b
+        pop bc
+        inc c
+        ld a,c
+        cp 8
+        jr c,.clr_y
+
+        ; 28 characters at a five-pixel advance = 140 pixels, centred at x=58
         ld hl,S_TITLE
-        ld b,0
-        jp center64
+        ld a,58
+        ld (title_x),a
+.next:
+        ld a,(hl)
+        or a
+        ret z
+        inc hl
+        cp ' '
+        jr z,.advance
+        push hl
+        call title5_find
+        push ix
+        push hl
+        pop ix
+        ld c,0
+.row:
+        ld a,(ix+0)
+        ld (title_bits),a
+        ld a,(title_x)
+        ld b,a
+        ld a,(title_bits)
+        bit 4,a
+        call nz,plot_xor
+        inc b
+        ld a,(title_bits)
+        bit 3,a
+        call nz,plot_xor
+        inc b
+        ld a,(title_bits)
+        bit 2,a
+        call nz,plot_xor
+        inc b
+        ld a,(title_bits)
+        bit 1,a
+        call nz,plot_xor
+        inc b
+        ld a,(title_bits)
+        bit 0,a
+        call nz,plot_xor
+        inc ix
+        inc c
+        ld a,c
+        cp 8
+        jr c,.row
+        pop ix
+        pop hl
+.advance:
+        ld a,(title_x)
+        add a,5
+        ld (title_x),a
+        jr .next
+
+title5_find:
+        ld c,a
+        ld hl,TITLE5
+        ld b,15
+.find:
+        ld a,(hl)
+        inc hl
+        cp c
+        ret z
+        ld de,8
+        add hl,de
+        djnz .find
+        ld hl,TITLE5_BLANK
+        ret
+
+TITLE5:
+        db 'S',14,16,12,2,28,0,0,0
+        db 'A',12,18,30,18,18,0,0,0
+        db 'N',18,26,22,18,18,0,0,0
+        db 'Y',18,18,12,4,4,0,0,0
+        db 'L',16,16,16,16,30,0,0,0
+        db 'C',14,16,16,16,14,0,0,0
+        db 'n',0,0,28,18,18,18,18,0
+        db 'e',0,0,12,18,30,16,14,0
+        db 't',8,8,28,8,8,10,4,0
+        db 'a',0,0,12,2,14,18,14,0
+        db 'b',16,16,28,18,18,18,28,0
+        db 's',0,0,14,16,12,2,28,0
+        db 'r',0,0,22,24,16,16,16,0
+        db 'o',0,0,12,18,18,18,12,0
+        db 'm',0,0,26,30,22,18,18,0
+TITLE5_BLANK:
+        db 0,0,0,0,0,0,0,0
 
 ; message buffer (status line, row 23, 64 columns, printed centred)
 msg_clear:

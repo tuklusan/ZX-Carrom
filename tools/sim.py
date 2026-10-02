@@ -83,6 +83,7 @@ def main():
     protected_ref = None
     protected_clean = False
     east_margin_clean = True
+    east_attr_clean = True
     small_game_title = False
     play_msgs = 0
     strikes = 0
@@ -90,7 +91,7 @@ def main():
     def draw(scr, frame, border, kb):
         nonlocal song_prev, song_wraps, pause_ref, pause_frozen, pause_resumed, restart_seen
         nonlocal intro_prompt, ribbon_intro, ribbon_game, protected_ref, protected_clean
-        nonlocal east_margin_clean, small_game_title
+        nonlocal east_margin_clean, east_attr_clean, small_game_title
         now_s = (regs[T] - t0) / 3500000
         for i in range(8): kb[i] = 0
         if a.nogroove: mem[sym['gm_run']] = 0
@@ -114,13 +115,17 @@ def main():
             cols=[mem[0x5800+(10+i)*32+31] & 7 for i in range(4)]
             if cols == [2,6,4,5]:
                 ribbon_game = True
-            title_rows=[]
+            inside=False
+            outside=False
             for yy in range(8):
-                base=paddr(0,yy)
-                title_rows.append([mem[base+xb] for xb in range(32)])
-            outer=[v for row in title_rows for v in row[:9]+row[23:]]
-            centre=[v for row in title_rows for v in row[9:23]]
-            if all(v == 0 for v in outer) and any(centre):
+                for xx in range(256):
+                    val=mem[paddr(xx//8,yy)]
+                    if val & (128 >> (xx & 7)):
+                        if 58 <= xx < 198:
+                            inside=True
+                        else:
+                            outside=True
+            if inside and not outside:
                 small_game_title = True
 
         if 2.2 <= now_s < 2.3 and protected_ref is None:
@@ -142,6 +147,14 @@ def main():
                     aa=paddr(xb,yy)
                     if mem[aa] != mem[aa+off]:
                         east_margin_clean = False
+            ribbon_attrs=(0x42,0x46,0x44,0x45)
+            for ar in range(3,21):
+                for xb in range(28,32):
+                    expected=0x47
+                    if xb == 31 and 10 <= ar < 14:
+                        expected=ribbon_attrs[ar-10]
+                    if mem[0x5800+ar*32+xb] != expected:
+                        east_attr_clean = False
         if os.environ.get('HUDTEST') and now_s > 3:
             mem[sym['score']] = 125; mem[sym['score']+1] = 7; mem[sym['boards_won']] = 12; mem[sym['boards_won']+1] = 3
             mem[sym['games_won']] = 10; mem[sym['games_won']+1] = 1; mem[sym['dues']] = 1
@@ -252,7 +265,7 @@ def main():
             'screen clean': stray_total == 0,
             'small flashing intro': intro_prompt,
             'spectrum ribbon': ribbon_intro and ribbon_game,
-            'protected HUD/ribbon': protected_clean and east_margin_clean,
+            'protected HUD/ribbon': protected_clean and east_margin_clean and east_attr_clean,
             'small game title': small_game_title,
             'space parallax': star_changes[2] > star_changes[1] > star_changes[0] >= 10,
         }

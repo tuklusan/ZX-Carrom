@@ -109,6 +109,8 @@ jobs:
           done
           cp /tmp/carrom_fast_1.z80 /tmp/carrom_fast.z80
           /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_std.z80 --secs 96 --prefix /tmp/std --shots 10,30,65,90 --seed 4660 --accept
+          mkdir -p build/runtime-view
+          cp /tmp/std_0030.0.png build/runtime-view/board.png
           /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_fast.z80 --secs 25 --prefix /tmp/fast --shots 10,25 --seed 4660
           QUITTEST=1 /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_std.z80 --secs 12 --prefix /tmp/quit-std --seed 4660 --quiet --quit-check
           QUITTEST=1 /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_fast.z80 --secs 12 --prefix /tmp/quit-fast --seed 4660 --quiet --quit-check
@@ -148,4 +150,11 @@ jobs:
             dist/carrom_fast.tzx
             dist/zx-carrom.zip
             dist/SHA256SUMS
+          if-no-files-found: error
+
+      - name: Upload runtime view
+        uses: actions/upload-artifact@v4
+        with:
+          name: zx-carrom-runtime-view
+          path: build/runtime-view/board.png
           if-no-files-found: error
