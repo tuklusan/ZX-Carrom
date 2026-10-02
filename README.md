@@ -18,7 +18,7 @@ It requires:
 - **Pasmo** from `https://github.com/tuklusan/pasmo`, on `PATH` or selected with `PASMO=/path/to/pasmo`;
 - the command-line **ZQLoader** host tool from `https://github.com/tuklusan/zqloader`, on `PATH` or selected with `ZQLOADER=/path/to/zqloader`.
 
-Generated font, board-table, and music assets are checked in. `python3 build.py --regen-assets` regenerates them and additionally needs Pillow, NumPy, and SkoolKit.
+Generated font, board-table, and music assets are checked in. `python3 build.py --regen-assets` regenerates them and additionally needs Pillow, NumPy, and SkoolKit from `https://github.com/tuklusan/skoolkit`.
 
 `tools/prepare_pasmo.py` deterministically flattens the hand-maintained game sources and converts old local-label/directive conveniences into Pasmo-compatible assembly. `tools/build_zqloader_pasmo.py` does the corresponding deterministic preparation for the adapted 48K ZQLoader bootstrap; the historical loader TAP from the handoff is comparison material only and is never a production input; `dist/reference/README.md` records its hash.
 
