@@ -31,7 +31,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends g++ cmake make git python3
+          sudo apt-get install -y --no-install-recommends g++ cmake make git python3 python3-venv\n          python3 -m venv /tmp/zxrun\n          /tmp/zxrun/bin/pip install --disable-pip-version-check skoolkit==10.1 pillow
 
       - name: Build Pasmo from authoritative fork
         run: |
@@ -81,6 +81,14 @@ jobs:
           cmp /tmp/build1/carrom.tap dist/carrom.tap
           cmp /tmp/build1/carrom_fast.tzx dist/carrom_fast.tzx
           cmp /tmp/build1/zx-carrom.zip dist/zx-carrom.zip
+
+      - name: Runtime tape and play checks
+        run: |
+          cp build/carrom.sym tools/carrom.sym
+          /tmp/zxrun/bin/tap2sna.py -c fast-load=0 -c accelerator=none -c cmio=1 -c pause=0 --start 32768 dist/carrom.tap /tmp/carrom_std.z80
+          /tmp/zxrun/bin/tap2sna.py -c fast-load=0 -c accelerator=none -c cmio=1 -c pause=0 -c in-flags=1 --start 32768 dist/carrom_fast.tzx /tmp/carrom_fast.z80
+          /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_std.z80 --secs 90 --prefix /tmp/std --shots 10,30,65,90
+          /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_fast.z80 --secs 20 --prefix /tmp/fast --shots 10,20
 
       - name: Record SHA-256 hashes
         run: |
