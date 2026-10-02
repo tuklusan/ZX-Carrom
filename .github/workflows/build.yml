@@ -3,10 +3,12 @@ name: clean-build
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'dist/**'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: zx-carrom-clean-build
@@ -107,7 +109,25 @@ jobs:
 
       - name: Verify clean source state
         run: |
-          test -z "$(git status --porcelain --untracked-files=no)"
+          git diff --exit-code -- . ':(exclude)dist/carrom.tap' ':(exclude)dist/carrom_fast.tzx' ':(exclude)dist/zx-carrom.zip' ':(exclude)dist/SHA256SUMS'
+
+      - name: Round-trip and commit accepted deliverables
+        run: |
+          mkdir -p /tmp/release64
+          for f in carrom.tap carrom_fast.tzx zx-carrom.zip; do
+            base64 -w 0 "dist/$f" > "/tmp/release64/$f.b64"
+            base64 -d "/tmp/release64/$f.b64" > "/tmp/release64/$f"
+            cmp "dist/$f" "/tmp/release64/$f"
+            mv "/tmp/release64/$f" "dist/$f"
+          done
+          sha256sum -c dist/SHA256SUMS
+          git config user.name "zx-carrom-release"
+          git config user.email "zx-carrom-release@users.noreply.github.com"
+          git add -f dist/carrom.tap dist/carrom_fast.tzx dist/zx-carrom.zip dist/SHA256SUMS
+          if ! git diff --cached --quiet; then
+            git commit -m "Store accepted release outputs"
+            git push origin HEAD:main
+          fi
 
       - name: Upload accepted release
         uses: actions/upload-artifact@v4

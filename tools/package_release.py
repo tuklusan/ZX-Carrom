@@ -6,7 +6,7 @@ import argparse, os, zipfile
 ROOT=Path(__file__).resolve().parents[1]
 FIXED=(2026,1,1,0,0,0)
 EXCLUDE_DIRS={'.git','build','__pycache__','tools/pasmo-build'}
-EXCLUDE_FILES={'dist/zx-carrom.zip'}
+EXCLUDE_FILES={'dist/zx-carrom.zip','dist/SHA256SUMS'}
 
 
 def include_path(p: Path):
