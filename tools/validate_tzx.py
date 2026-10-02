@@ -38,7 +38,7 @@ def parse_gdb(body):
         vals=[u16(body,p+1+2*k) for k in range(npd)]
         dsyms.append([x for x in vals if x])
         p += 1 + 2*npd
-    return pause, psyms, prle, dsyms
+    return pause, totd, psyms, prle, dsyms
 
 def validate(path):
     d = Path(path).read_bytes()
@@ -70,7 +70,9 @@ def validate(path):
             pause,n=u16(d,o+2),u24(d,o+5); pauses.append(pause); o += 8+n
         elif bid == 0x19:
             n=u32(d,o); body=d[o:o+4+n]
-            pause,psyms,prle,dsyms=parse_gdb(body); pauses.append(pause)
+            pause,totd,psyms,prle,dsyms=parse_gdb(body); pauses.append(pause)
+            if not totd:
+                raise SystemExit(f"{path}: timing-only generalized block remains")
             if leader is None and prle:
                 sym,rep=prle[0]
                 if sym < len(psyms) and psyms[sym] and all(x == FAST_LEADER_PULSE for x in psyms[sym]):

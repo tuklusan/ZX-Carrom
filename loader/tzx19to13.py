@@ -89,7 +89,7 @@ def convert(src, dst):
     assert d[:8] == b'ZXTape!\x1a'
     out = bytearray(d[:10])
     o = 10
-    n19 = n20 = n11 = n13 = 0
+    n19 = n19wait = n20 = n11 = n13 = 0
     fast_leader_done = False
     rom_index = 0
 
@@ -115,10 +115,13 @@ def convert(src, dst):
         if bid == 0x19:
             body = bytearray(d[o:o + ln])
             struct.pack_into('<H', body, 4, 0)
-            if not fast_leader_done and patch_compact_leader(body):
-                fast_leader_done = True
-            out += bytes([bid]) + body
-            n19 += 1
+            if u32(body, 12) == 0:
+                n19wait += 1
+            else:
+                if not fast_leader_done and patch_compact_leader(body):
+                    fast_leader_done = True
+                out += bytes([bid]) + body
+                n19 += 1
         elif bid == 0x20:
             n20 += 1
         elif bid == 0x11:
@@ -151,7 +154,8 @@ def convert(src, dst):
         raise ValueError('fast leader not found')
     open(dst, 'wb').write(out)
     print(f"{dst}: {n11} ROM blocks, {n19} compact generalized block(s), "
-          f"{n13} legacy pulse block(s), {n20} pause block(s) removed")
+          f"{n13} legacy pulse block(s), {n20} pause block(s) removed, "
+          f"{n19wait} timing-only generalized wait(s) removed")
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
