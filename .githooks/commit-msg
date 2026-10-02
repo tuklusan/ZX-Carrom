@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+ROOT="$(git rev-parse --show-toplevel)"
+exec python3 "$ROOT/tools/check_restricted_terms.py" --message-file "$1"
