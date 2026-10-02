@@ -92,7 +92,9 @@ The main program starts at `$8000`. Board pixels use `$E000-$F7FF`, board attrib
 
 ## Verification status
 
-The repository validators are designed to fail on malformed TAP/TZX data or on timing/leader/pause regressions. A release is only described as runtime-accepted after the standard TAP and fast TZX have been exercised in a ZX Spectrum 48K emulator with normal tape playback and the robot/game/audio/control checks have passed. Emulator results are documented as emulator results; no real-hardware claim is made without real-hardware testing.
+Current status is emulator runtime-accepted. The clean Ubuntu workflow uses cycle-level ZX Spectrum 48K tape playback rather than instant-load shortcuts. It requires the standard TAP to reach the machine-code entry point and requires the fast TZX to do so three times in succession with the zero-gap, short-leader format intact.
+
+The run-time harness then exercises a deterministic live match long enough to see all four robot seats take turns, multiple strikes and pocket events, stable turn progression, a complete live-music loop, and clean screen state. It also injects and verifies all three sound modes, pause/freeze/resume, fast/normal switching, match restart, effects returning idle, and return to BASIC. A second live check starts from the fast-tape snapshot. These are emulator results only; no real-hardware claim is made.
 
 ## Credits and licences
 
