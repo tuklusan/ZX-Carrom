@@ -47,6 +47,8 @@ def main():
     ap.add_argument('--verbose', action='store_true')
     ap.add_argument('--seed', type=int, default=None)
     ap.add_argument('--nogroove', action='store_true')
+    ap.add_argument('--accept', action='store_true')
+    ap.add_argument('--quit-check', action='store_true')
     a = ap.parse_args()
     snap = Snapshot.get(a.snap)
     sim = from_snapshot(CSimulator, snap, {}, {'ay': [None] * 16}, {'fast_djnz': False, 'fast_ldir': False})
@@ -62,7 +64,22 @@ def main():
     stop = sym['msg_show']
     pc = snap.pc
     msgs = []
+    seats_seen = set()
+    modes_seen = set()
+    fast_seen = set()
+    phases_seen = set()
+    song_positions = set()
+    song_prev = None
+    song_wraps = 0
+    pause_ref = None
+    pause_frozen = True
+    pause_resumed = False
+    restart_seen = False
+    play_msgs = 0
+    strikes = 0
+    stray_total = 0
     def draw(scr, frame, border, kb):
+        nonlocal song_prev, song_wraps, pause_ref, pause_frozen, pause_resumed, restart_seen
         now_s = (regs[T] - t0) / 3500000
         for i in range(8): kb[i] = 0
         if a.nogroove: mem[sym['gm_run']] = 0
@@ -73,8 +90,34 @@ def main():
         if os.environ.get('KEYTEST'):
             if 10.0 <= now_s < 10.2 or 13.0 <= now_s < 13.2: kb[7] |= 4        # M
             if 16.0 <= now_s < 16.2: kb[7] |= 1                             # SPACE
+        if a.accept:
+            if 8.0 <= now_s < 8.2 or 9.5 <= now_s < 9.7 or 11.0 <= now_s < 11.2: kb[7] |= 4
+            if 13.0 <= now_s < 13.2 or 15.0 <= now_s < 15.2: kb[7] |= 1
+            if 17.0 <= now_s < 17.2 or 18.0 <= now_s < 18.2: kb[1] |= 8
+            if 75.0 <= now_s < 75.2: kb[2] |= 8
         if 1.5 <= now_s < 1.7:
             kb[6] |= 1                       # ENTER: leave the title page
+        if a.accept:
+            modes_seen.add(mem[sym['snd_mode']])
+            fast_seen.add(mem[sym['fast']])
+            phases_seen.add(mem[sym['phase']])
+            if mem[sym['gm_run']] and not mem[sym['music_off']] and not mem[sym['paused']]:
+                p = mem[sym['gm_songp']] | (mem[sym['gm_songp'] + 1] << 8)
+                song_positions.add(p)
+                if song_prev is not None and p < song_prev and now_s < 74.0:
+                    song_wraps += 1
+                song_prev = p
+            state = (mem[sym['phase']], mem[sym['timer']], mem[sym['ticks']] | (mem[sym['ticks'] + 1] << 8), mem[sym['seat']], mem[sym['gm_songp']] | (mem[sym['gm_songp'] + 1] << 8))
+            if mem[sym['paused']] and now_s >= 13.3:
+                if pause_ref is None:
+                    pause_ref = state
+                elif state != pause_ref:
+                    pause_frozen = False
+            if pause_ref is not None and not mem[sym['paused']] and now_s >= 15.3 and state != pause_ref:
+                pause_resumed = True
+            if 75.2 <= now_s <= 77.0 and mem[sym['phase']] == 8 and mem[sym['timer']] >= 60:
+                if not any(mem[sym[k]] for k in ('games_played', 'boards_in_game')) and not any(mem[sym['score'] + i] for i in range(2)) and not any(mem[sym['boards_won'] + i] for i in range(2)) and not any(mem[sym['games_won'] + i] for i in range(2)):
+                    restart_seen = True
         return True
     import io, contextlib
     while regs[T] < end:
@@ -124,9 +167,41 @@ def main():
                     info+=f" coin@({mem[b+1]}.{mem[b]*100//256},{mem[b+3]}.{mem[b+2]*100//256}) seatuv=({sb(mem[sym['ai_u']+bid])},{sb(mem[sym['ai_v']+bid])})"
                 info+=f" g=({w('fc_gx')/16:.1f},{w('fc_gy')/16:.1f}) s=({w('fc_sx')/16:.1f},{w('fc_sy')/16:.1f})"
                 print(info)
+            if a.accept and ('THINKING' in text or 'BREAKS' in text):
+                seats_seen.add(mem[sym['seat']])
+                play_msgs += 1
+            if a.accept and 'STRIKING' in text:
+                strikes += 1
+            if a.accept:
+                stray_total += bad if ('THINKING' in text or 'BREAKS' in text) else 0
             if not a.quiet:
                 print(f"{now:8.1f}s  [{sc[0]:2d}-{sc[1]:2d}] left W{left[0]} B{left[1]} q{mem[sym['qstate']]}  {text}")
     screenshot(mem, f"{a.prefix}_end.png")
+    if a.accept:
+        checks = {
+            'four seats': seats_seen == {0, 1, 2, 3},
+            'turn flow': play_msgs >= 8 and strikes >= 4,
+            'sound cycle': {0, 1, 2}.issubset(modes_seen),
+            'speed toggle': {0, 1}.issubset(fast_seen),
+            'pause freeze': pause_ref is not None and pause_frozen,
+            'pause resume': pause_resumed,
+            'restart': restart_seen,
+            'groove active': len(song_positions) >= 20,
+            'groove loop': song_wraps >= 1,
+            'effects idle': mem[sym['sfx_busy']] == 0,
+            'phase sane': phases_seen and max(phases_seen) <= 11,
+            'screen clean': stray_total == 0,
+        }
+        for name, ok in checks.items():
+            print(f"runtime {name}: {'PASS' if ok else 'FAIL'}")
+        bad_checks = [name for name, ok in checks.items() if not ok]
+        if bad_checks:
+            raise SystemExit('runtime checks failed: ' + ', '.join(bad_checks))
+    if a.quit_check:
+        ok = pc < 0x4000 and mem[sym['gm_run']] == 0
+        print(f"runtime quit return: {'PASS' if ok else 'FAIL'} pc={pc}")
+        if not ok:
+            raise SystemExit('quit return check failed')
     return msgs
 
 if __name__ == '__main__':

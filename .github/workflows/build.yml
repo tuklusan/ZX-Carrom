@@ -92,10 +92,14 @@ jobs:
           cp build/carrom.sym tools/carrom.sym
           /tmp/zxrun/bin/tap2sna.py -c fast-load=0 -c accelerator=none -c cmio=1 -c pause=0 --start 32768 dist/carrom.tap /tmp/carrom_std.z80 2>&1 | tee /tmp/std-load.log
           grep -Fq 'Simulation stopped (PC at start address): PC=32768' /tmp/std-load.log
-          /tmp/zxrun/bin/tap2sna.py -c fast-load=0 -c accelerator=none -c cmio=1 -c pause=0 -c in-flags=1 --start 32768 dist/carrom_fast.tzx /tmp/carrom_fast.z80 2>&1 | tee /tmp/fast-load.log
-          grep -Fq 'Simulation stopped (PC at start address): PC=32768' /tmp/fast-load.log
-          /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_std.z80 --secs 90 --prefix /tmp/std --shots 10,30,65,90
-          /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_fast.z80 --secs 20 --prefix /tmp/fast --shots 10,20
+          for n in 1 2 3; do
+            /tmp/zxrun/bin/tap2sna.py -c fast-load=0 -c accelerator=none -c cmio=1 -c pause=0 -c in-flags=1 --start 32768 dist/carrom_fast.tzx "/tmp/carrom_fast_${n}.z80" 2>&1 | tee "/tmp/fast-load-${n}.log"
+            grep -Fq 'Simulation stopped (PC at start address): PC=32768' "/tmp/fast-load-${n}.log"
+          done
+          cp /tmp/carrom_fast_1.z80 /tmp/carrom_fast.z80
+          /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_std.z80 --secs 96 --prefix /tmp/std --shots 10,30,65,90 --seed 4660 --accept
+          /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_fast.z80 --secs 25 --prefix /tmp/fast --shots 10,25 --seed 4660
+          QUITTEST=1 /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_std.z80 --secs 12 --prefix /tmp/quit --seed 4660 --quiet --quit-check
 
       - name: Record SHA-256 hashes
         run: |
