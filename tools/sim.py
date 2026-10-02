@@ -78,15 +78,16 @@ def main():
     intro_prompt = False
     ribbon_intro = False
     ribbon_game = False
-    star_far_seen = set()
-    star_mid_seen = set()
-    star_near_seen = set()
+    star_prev = [None, None, None]
+    star_changes = [0, 0, 0]
+    protected_ref = None
+    protected_clean = False
     play_msgs = 0
     strikes = 0
     stray_total = 0
     def draw(scr, frame, border, kb):
         nonlocal song_prev, song_wraps, pause_ref, pause_frozen, pause_resumed, restart_seen
-        nonlocal intro_prompt, ribbon_intro, ribbon_game
+        nonlocal intro_prompt, ribbon_intro, ribbon_game, protected_ref, protected_clean
         now_s = (regs[T] - t0) / 3500000
         for i in range(8): kb[i] = 0
         if a.nogroove: mem[sym['gm_run']] = 0
@@ -98,12 +99,29 @@ def main():
             if cols == [2,6,4,5]:
                 ribbon_intro = True
         if 2.0 <= now_s < 5.0:
-            star_far_seen.add(mem[sym['star_far']])
-            star_mid_seen.add(mem[sym['star_mid']])
-            star_near_seen.add(mem[sym['star_near']])
+            vals=[mem[sym['star_far']], mem[sym['star_mid']], mem[sym['star_near']]]
+            for i,v in enumerate(vals):
+                if star_prev[i] is not None and v != star_prev[i]:
+                    star_changes[i] += 1
+                star_prev[i] = v
             cols=[mem[0x5800+(10+i)*32+27] & 7 for i in range(4)]
             if cols == [2,6,4,5]:
                 ribbon_game = True
+
+        def paddr(xb,y):
+            return 0x4000 | ((y & 0xC0) << 5) | ((y & 7) << 8) | ((y & 0x38) << 2) | xb
+        if 2.2 <= now_s < 2.3 and protected_ref is None:
+            keep=[]
+            for y in list(range(8,24))+list(range(168,184)):
+                keep.extend(mem[paddr(xb,y)] for xb in list(range(0,6))+list(range(26,32)))
+            keep.extend(mem[paddr(27,y)] for y in range(80,112))
+            protected_ref=bytes(keep)
+        if 3.2 <= now_s < 3.3 and protected_ref is not None:
+            keep=[]
+            for y in list(range(8,24))+list(range(168,184)):
+                keep.extend(mem[paddr(xb,y)] for xb in list(range(0,6))+list(range(26,32)))
+            keep.extend(mem[paddr(27,y)] for y in range(80,112))
+            protected_clean = bytes(keep) == protected_ref
         if os.environ.get('HUDTEST') and now_s > 3:
             mem[sym['score']] = 125; mem[sym['score']+1] = 7; mem[sym['boards_won']] = 12; mem[sym['boards_won']+1] = 3
             mem[sym['games_won']] = 10; mem[sym['games_won']+1] = 1; mem[sym['dues']] = 1
@@ -214,7 +232,8 @@ def main():
             'screen clean': stray_total == 0,
             'small flashing intro': intro_prompt,
             'spectrum ribbon': ribbon_intro and ribbon_game,
-            'space parallax': len(star_near_seen) > len(star_mid_seen) > len(star_far_seen) >= 8,
+            'protected HUD/ribbon': protected_clean,
+            'space parallax': star_changes[2] > star_changes[1] > star_changes[0] >= 10,
         }
         for name, ok in checks.items():
             print(f"runtime {name}: {'PASS' if ok else 'FAIL'}")

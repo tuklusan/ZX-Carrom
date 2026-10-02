@@ -556,6 +556,12 @@ stars_draw:
         ld b,a
         ld c,(hl)
         inc hl
+        ; hard clip: top/bottom HUD rows and the ribbon lane are protected
+        ld a,c
+        cp 24
+        jr c,.star
+        cp 168
+        jr nc,.star
         push hl
         ld a,b
         and 31
@@ -575,7 +581,14 @@ stars_draw:
         or 224
         ld b,a
 .plot:
+        ld a,b
+        cp 216
+        jr c,.draw
+        cp 224
+        jr c,.skip
+.draw:
         call plot_xor
+.skip:
         pop hl
         jr .star
 
