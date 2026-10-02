@@ -65,7 +65,7 @@ UPPER_TOP               EQU 0xC000-1    // last used location after loader code 
 UPPER_TOP               EQU 0xFFFF      // last used location after loader code copied to upper region.
  ENDIF
 //----------------------------------------------------------------------------
-LEADER_MIN_EDGES        EQU 200         // Minimum edges a leader need to have to be accepted
+LEADER_MIN_EDGES        EQU 32          // leaves startup margin inside the 256-pulse fast leader
 
 LEADER_MAX              EQU 48          // accept the stretched 256-pulse fast leader
 LEADER_MIN              EQU 32          
