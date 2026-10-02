@@ -91,6 +91,7 @@ def convert(src, dst):
     o = 10
     n19 = n19wait = n20 = n11 = n13 = 0
     fast_leader_done = False
+    fast_leaders = 0
     rom_index = 0
 
     while o < len(d):
@@ -118,8 +119,9 @@ def convert(src, dst):
             if u32(body, 12) == 0:
                 n19wait += 1
             else:
-                if not fast_leader_done and patch_compact_leader(body):
+                if patch_compact_leader(body):
                     fast_leader_done = True
+                    fast_leaders += 1
                 out += bytes([bid]) + body
                 n19 += 1
         elif bid == 0x20:
@@ -155,7 +157,8 @@ def convert(src, dst):
     open(dst, 'wb').write(out)
     print(f"{dst}: {n11} ROM blocks, {n19} compact generalized block(s), "
           f"{n13} legacy pulse block(s), {n20} pause block(s) removed, "
-          f"{n19wait} timing-only generalized wait(s) removed")
+          f"{n19wait} timing-only generalized wait(s) removed, "
+          f"{fast_leaders} compact fast leader(s) normalized")
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:

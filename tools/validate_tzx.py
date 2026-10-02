@@ -49,7 +49,7 @@ def validate(path):
 
     o=10
     ids=[]; rom=[]; explicit=[]; pauses=[]; timing=collections.Counter()
-    leader=None
+    leaders=[]
     while o < len(d):
         bid=d[o]; o+=1; ids.append(bid)
         if bid == 0x10:
@@ -60,7 +60,7 @@ def validate(path):
             rom.append((pilot,sync1,sync2,zero,one,count,used,pause,n)); pauses.append(pause); o += 18+n
         elif bid == 0x12:
             pulse,count=u16(d,o),u16(d,o+2)
-            if leader is None and pulse == FAST_LEADER_PULSE: leader=count
+            if pulse == FAST_LEADER_PULSE: leaders.append(count)
             o += 4
         elif bid == 0x13:
             raise SystemExit(f"{path}: expanded pulse-sequence block 0x13 remains")
@@ -73,10 +73,10 @@ def validate(path):
             pause,totd,psyms,prle,dsyms=parse_gdb(body); pauses.append(pause)
             if not totd:
                 raise SystemExit(f"{path}: timing-only generalized block remains")
-            if leader is None and prle:
+            if len(prle) >= 2:
                 sym,rep=prle[0]
                 if sym < len(psyms) and psyms[sym] and all(x == FAST_LEADER_PULSE for x in psyms[sym]):
-                    leader=rep*len(psyms[sym])
+                    leaders.append(rep*len(psyms[sym]))
             for sym in dsyms:
                 timing.update(sym)
             o += 4+n
@@ -98,15 +98,15 @@ def validate(path):
         raise SystemExit(f"{path}: ROM pilot counts {[x[5] for x in rom]} != {ROM_PILOTS}")
     if explicit: raise SystemExit(f"{path}: explicit pause block(s) present: {explicit}")
     if any(pauses): raise SystemExit(f"{path}: nonzero per-block pause(s): {pauses}")
-    if leader != FAST_LEADER:
-        raise SystemExit(f"{path}: fast leader has {leader} pulses, expected {FAST_LEADER}")
+    if leaders != [FAST_LEADER, FAST_LEADER]:
+        raise SystemExit(f"{path}: fast leaders are {leaders}, expected two blocks of {FAST_LEADER}")
     for p in (ZERO,ONE,ZERO+BYTE_DELAY,ONE+BYTE_DELAY):
         if not timing[p]: raise SystemExit(f"{path}: required turbo timing {p} T-states not found")
     if timing[1140] or timing[2280]:
         raise SystemExit(f"{path}: legacy slower pulses remain")
     if 0x19 not in ids:
         raise SystemExit(f"{path}: compact generalized-data blocks missing")
-    print(f"TZX OK: {len(d)} bytes, pilots {ROM_PILOTS[0]}/{ROM_PILOTS[1]}, fast leader {leader}x{FAST_LEADER_PULSE}, turbo {ZERO}/{ONE}, no pauses")
+    print(f"TZX OK: {len(d)} bytes, pilots {ROM_PILOTS[0]}/{ROM_PILOTS[1]}, fast leaders {leaders}x{FAST_LEADER_PULSE}, turbo {ZERO}/{ONE}, no pauses")
     print("TZX blocks:", dict(sorted(collections.Counter(ids).items())))
 
 def main():
