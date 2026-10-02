@@ -8,10 +8,12 @@ The previous known-good bootstrap is not used or shipped as current output. Its 
 
 `tzx19to13.py` finalizes ZQLoader's TZX output by:
 
-- expanding generalized-data (`0x19`) blocks to ordinary pulse-sequence (`0x13`) blocks;
+- preserving compact generalized-data (`0x19`) blocks and patching the fast leader in place;
 - preserving the two cold-loadable ROM pilots at 2824 and 2420 pulses;
-- shortening the first complete contiguous fast pulse leader to 256 pulses at 1710 T-states each even when it originally spans several `0x13` chunks;
+- shortening the fast leader to 256 pulses at 1710 T-states each inside the compact generalized block, while retaining the legacy multi-`0x13` shortening path for compatibility;
 - forcing per-block pauses to 0 ms; and
 - removing explicit pause (`0x20`) blocks.
 
 The production host settings are 855 T-states for a zero and 1710 T-states for a one, exactly half the usual ROM data pulse timing. The no-gap layout and short 256-pulse fast leader must pass emulator tape-playback acceptance before release.
+
+The production bootstrap prints a visible `CARROM ARENA` / `TURBO LOADING` banner before it begins decoding the fast stream. Runtime tape playback verifies that this still acquires the 256-pulse leader reliably.

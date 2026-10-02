@@ -54,12 +54,13 @@ The final TZX is independently parsed and must contain:
 - ROM pilot 1: **2824 pulses**;
 - ROM pilot 2: **2420 pulses**;
 - fast leader: **256 pulses at 1710 T-states each**;
+- compact generalized-data encoding for the turbo stream (no expanded pulse-sequence payload);
 - turbo zero pulse: **855 T-states**;
 - turbo one pulse: **1710 T-states**;
 - no explicit pause blocks;
 - **0 ms** pause on every data block.
 
-ZQLoader adds its normal 64-T-state end-of-byte delay to the final data pulse of each byte. `loader/tzx19to13.py` also preserves the fix that shortens the initial fast leader across the whole contiguous `0x13` pulse stream, not merely the first 255-pulse TZX chunk.
+ZQLoader adds its normal 64-T-state end-of-byte delay to the final data pulse of each byte. `loader/tzx19to13.py` keeps the compact generalized-data stream and patches its fast leader in place; the legacy pulse-sequence path still shortens a leader across the whole contiguous stream rather than only its first chunk. The turbo bootstrap displays a visible Carrom loading banner before decoding the fast stream.
 
 ## Audio
 

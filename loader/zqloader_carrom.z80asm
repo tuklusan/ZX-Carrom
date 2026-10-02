@@ -158,10 +158,8 @@ ASM_START:
     ld BC, ASM_UPPER_LEN            
     ldir
 
- IFDEF DEBUG
     ld DE, TEXT_LOADING
-    call PRINT                  // print "Loading..." 
- ENDIF
+    call PRINT                  // visible turbo loading banner
     
     // initialize
     di                          // #di1          
