@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import io
 from pathlib import Path
 import re
 import subprocess
 import sys
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -71,9 +73,28 @@ def scan_bytes(label: bytes, data: bytes) -> int:
     return failures
 
 
+_BINARY_EXTS = {b".tap", b".tzx"}
+_TEXT_EXTS = {b".asm", b".inc", b".md", b".py", b".txt", b".yml", b".yaml", b".json", b".toml", b".cfg", b".ini", b".exp"}
+
+def scan_zip(path: bytes, data: bytes) -> int:
+    failures = 0
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        for info in z.infolist():
+            name = info.filename.encode("utf-8", "surrogateescape")
+            failures += scan_bytes(path + b":" + name, name)
+            ext = Path(info.filename).suffix.lower().encode("ascii", "ignore")
+            if ext in _TEXT_EXTS:
+                failures += scan_bytes(path + b":" + name, z.read(info))
+    return failures
+
 def scan_entry(path: bytes, sha: str) -> int:
     failures = scan_bytes(b"<path>", path)
-    failures += scan_bytes(path, blob(sha))
+    data = blob(sha)
+    ext = Path(path.decode("utf-8", "surrogateescape")).suffix.lower().encode("ascii", "ignore")
+    if ext == b".zip":
+        failures += scan_zip(path, data)
+    elif ext not in _BINARY_EXTS:
+        failures += scan_bytes(path, data)
     return failures
 
 
