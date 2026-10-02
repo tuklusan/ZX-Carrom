@@ -1,6 +1,8 @@
 # Carrom Arena ZX
 
-Carrom Arena is a ZX Spectrum 48K machine-code game in which four autonomous robot players play doubles carrom. The production build is source-first: it assembles the game and the adapted turbo-loader bootstrap with Pasmo, builds both tape formats, and rejects structural mismatches.
+Carrom Arena is a ZX Spectrum 48K machine-code game in which four autonomous robot players play doubles carrom.
+
+Upstream project: `https://github.com/tuklusan/carrom-arena`. The production build is source-first: it assembles the game and the adapted turbo-loader bootstrap with Pasmo, builds both tape formats, and rejects structural mismatches.
 
 ## Build
 
@@ -14,7 +16,7 @@ It requires:
 
 - Python 3;
 - **Pasmo** from `https://github.com/tuklusan/pasmo`, on `PATH` or selected with `PASMO=/path/to/pasmo`;
-- the command-line **ZQLoader** host tool from `https://github.com/oxidaan/zqloader`, on `PATH` or selected with `ZQLOADER=/path/to/zqloader`.
+- the command-line **ZQLoader** host tool from `https://github.com/tuklusan/zqloader`, on `PATH` or selected with `ZQLOADER=/path/to/zqloader`.
 
 Generated font, board-table, and music assets are checked in. `python3 build.py --regen-assets` regenerates them and additionally needs Pillow, NumPy, and SkoolKit.
 
