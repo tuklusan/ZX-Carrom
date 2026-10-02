@@ -94,6 +94,10 @@ def main():
         now_s = (regs[T] - t0) / 3500000
         for i in range(8): kb[i] = 0
         if a.nogroove: mem[sym['gm_run']] = 0
+
+        def paddr(xb,y):
+            return 0x4000 | ((y & 0xC0) << 5) | ((y & 7) << 8) | ((y & 0x38) << 2) | xb
+
         if 0.4 <= now_s < 1.4:
             aa=[mem[0x5800+17*32+c] for c in range(12,19)]
             if aa and all(v & 0x80 for v in aa):
@@ -119,8 +123,6 @@ def main():
             if all(v == 0 for v in outer) and any(centre):
                 small_game_title = True
 
-        def paddr(xb,y):
-            return 0x4000 | ((y & 0xC0) << 5) | ((y & 7) << 8) | ((y & 0x38) << 2) | xb
         if 2.2 <= now_s < 2.3 and protected_ref is None:
             keep=[]
             for y in list(range(8,24))+list(range(168,184)):
