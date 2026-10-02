@@ -91,9 +91,10 @@ def dot_locals(lines):
     serial=0
     out=[]
     for line in lines:
-        # A numeric local has already been converted and should be a scope too.
+        # SjASMPlus numeric labels (converted to __N...) are local branch
+        # targets; they do not end the surrounding dot-local namespace.
         m=normal_label_re.match(line)
-        if m and not line.lstrip().startswith('.'):
+        if m and not line.lstrip().startswith('.') and not m.group(1).startswith('__N'):
             scope=m.group(1)
             serial += 1
         prefix=f'__D{serial}_{re.sub(r"[^A-Za-z0-9_]", "_", scope)}_'
