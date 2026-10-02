@@ -11,7 +11,15 @@ from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
 sym = {}
 for ln in open(os.path.join(HERE, 'carrom.sym')):
-    m = __import__('re').match(r'^\\s*([^\\s:]+):?\\s+EQU\\s+(?:0x)?([0-9A-Fa-f]+)H?\\s*
+    p = ln.replace(':', '').split()
+    if len(p) >= 3 and p[1].upper() == 'EQU':
+        v = p[2]
+        if v.lower().startswith('0x'):
+            sym[p[0]] = int(v, 16)
+        elif v.upper().endswith('H'):
+            sym[p[0]] = int(v[:-1], 16)
+        else:
+            sym[p[0]] = int(v, 0)
 PAL = [(0, 0, 0), (0, 0, 0xD7), (0xD7, 0, 0), (0xD7, 0, 0xD7), (0, 0xD7, 0), (0, 0xD7, 0xD7), (0xD7, 0xD7, 0), (0xD7, 0xD7, 0xD7),
        (0, 0, 0), (0, 0, 0xFF), (0xFF, 0, 0), (0xFF, 0, 0xFF), (0, 0xFF, 0), (0, 0xFF, 0xFF), (0xFF, 0xFF, 0), (0xFF, 0xFF, 0xFF)]
 
