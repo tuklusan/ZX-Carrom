@@ -10,7 +10,7 @@ The previous known-good bootstrap is not used or shipped as current output. Its 
 
 - expanding generalized-data (`0x19`) blocks to ordinary pulse-sequence (`0x13`) blocks;
 - shortening each of the two ROM pilots to 512 pulses;
-- shortening the first complete contiguous fast pulse leader to 256 pulses at 1710 T-states each even when it originally spans several `0x13` chunks;
+- shortening the first complete contiguous fast pulse leader to 256 pulses at 10000 T-states each even when it originally spans several `0x13` chunks;
 - forcing per-block pauses to 0 ms; and
 - removing explicit pause (`0x20`) blocks.
 

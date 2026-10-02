@@ -5,7 +5,7 @@ import argparse, collections, struct
 
 ROM_PILOTS = [512, 512]
 FAST_LEADER = 256
-FAST_LEADER_PULSE = 1710
+FAST_LEADER_PULSE = 10000
 ZERO = 855
 ONE = 1710
 BYTE_DELAY = 64

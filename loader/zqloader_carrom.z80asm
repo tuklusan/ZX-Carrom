@@ -67,8 +67,8 @@ UPPER_TOP               EQU 0xFFFF      // last used location after loader code 
 //----------------------------------------------------------------------------
 LEADER_MIN_EDGES        EQU 32          // leaves startup margin inside the 256-pulse fast leader
 
-LEADER_MAX              EQU 48          // accept the stretched 256-pulse fast leader
-LEADER_MIN              EQU 32          
+LEADER_MAX              EQU 250         // accept the stretched 256-pulse fast leader
+LEADER_MIN              EQU 210          
 
 SYNC_MAX                EQU LEADER_MIN-1 //  a sync is between SYNC_MIN and SYNC_MAX
 SYNC_MIN                EQU 4           

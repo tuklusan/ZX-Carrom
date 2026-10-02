@@ -12,7 +12,7 @@ import sys, struct
 
 SHORT_ROM_PILOT = 512
 SHORT_FAST_LEADER = 256
-FAST_LEADER_PULSE = 1710
+FAST_LEADER_PULSE = 10000
 
 def u16(b, o): return struct.unpack_from('<H', b, o)[0]
 def u32(b, o): return struct.unpack_from('<I', b, o)[0]
