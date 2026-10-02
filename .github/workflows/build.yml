@@ -1,0 +1,85 @@
+name: clean-build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PASMO_REF: ef6d399c770a30fbd8bdaa7272ccc7e2b0bcf0dd
+      ZQLOADER_REF: ca5913fb563be1903f70aab9e88b0497606769f4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          clean: true
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends g++ cmake make git python3
+
+      - name: Build Pasmo from authoritative fork
+        run: |
+          git clone https://github.com/tuklusan/pasmo.git /tmp/pasmo
+          git -C /tmp/pasmo checkout "$PASMO_REF"
+          g++ -O2 -std=c++11 -o /tmp/pasmo/pasmo \
+            /tmp/pasmo/asm.cpp /tmp/pasmo/asmfile.cpp /tmp/pasmo/cpc.cpp \
+            /tmp/pasmo/pasmo.cpp /tmp/pasmo/pasmotypes.cpp /tmp/pasmo/spectrum.cpp \
+            /tmp/pasmo/tap.cpp /tmp/pasmo/token.cpp /tmp/pasmo/trace.cpp /tmp/pasmo/tzx.cpp
+          /tmp/pasmo/pasmo --version || true
+
+      - name: Build ZQLoader host tool
+        run: |
+          git clone https://github.com/oxidaan/zqloader.git /tmp/zqloader
+          git -C /tmp/zqloader checkout "$ZQLOADER_REF"
+          cmake -S /tmp/zqloader -B /tmp/zqloader-build -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Qt6=ON
+          cmake --build /tmp/zqloader-build --target zqloader -j2
+          /tmp/zqloader-build/zqloader version || true
+
+      - name: Clean production build 1
+        env:
+          PASMO: /tmp/pasmo/pasmo
+          ZQLOADER: /tmp/zqloader-build/zqloader
+        run: |
+          python3 build.py
+          python3 tools/package_release.py dist/zx-carrom.zip
+          mkdir -p /tmp/build1
+          cp build/carrom.bin dist/carrom.tap dist/carrom_fast.tzx dist/zx-carrom.zip /tmp/build1/
+
+      - name: Clean production build 2 and reproducibility check
+        env:
+          PASMO: /tmp/pasmo/pasmo
+          ZQLOADER: /tmp/zqloader-build/zqloader
+        run: |
+          python3 build.py
+          python3 tools/package_release.py dist/zx-carrom.zip
+          cmp /tmp/build1/carrom.bin build/carrom.bin
+          cmp /tmp/build1/carrom.tap dist/carrom.tap
+          cmp /tmp/build1/carrom_fast.tzx dist/carrom_fast.tzx
+          cmp /tmp/build1/zx-carrom.zip dist/zx-carrom.zip
+
+      - name: Record SHA-256 hashes
+        run: |
+          sha256sum build/carrom.bin dist/carrom.tap dist/carrom_fast.tzx dist/zx-carrom.zip | tee dist/SHA256SUMS
+
+      - name: Verify clean source state
+        run: |
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Upload accepted release
+        uses: actions/upload-artifact@v4
+        with:
+          name: zx-carrom-release
+          path: |
+            dist/carrom.tap
+            dist/carrom_fast.tzx
+            dist/zx-carrom.zip
+            dist/SHA256SUMS
+          if-no-files-found: error
