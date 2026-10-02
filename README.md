@@ -34,6 +34,10 @@ git config core.hooksPath .githooks
 
 The local checks reject restricted vocabulary in the complete staged index and in the proposed commit message. The build workflow repeats the check against the committed tree and current commit message, so bypassing a local hook does not produce a passing build.
 
+## Delivery rule
+
+Accepted project deliverables are repository content, not temporary job output. Every accepted release must commit its final deliverables under `dist/` on `main`. A release is not complete until the tracked files in `dist/` match a fresh validated build. Workflow artifacts may mirror those files for convenience, but they never replace the committed copies.
+
 ## Release files
 
 A successful build creates:
