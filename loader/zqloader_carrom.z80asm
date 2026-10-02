@@ -460,10 +460,8 @@ PRINT:
 
 //----------------------------------------------------------------------------
 
- IFDEF DEBUG
 TEXT_LOADING:
-    DC " Loading...\r"        
- ENDIF
+    db " CARROM ARENA - TURBO LOADIN",199
 TEXT_CHECKSUM_ERROR :
     DC "CRC "
 TEXT_ERROR :
