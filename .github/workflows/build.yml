@@ -36,7 +36,7 @@ jobs:
 
       - name: Build ZQLoader host tool
         run: |
-          git clone https://github.com/oxidaan/zqloader.git /tmp/zqloader
+          git clone https://github.com/tuklusan/zqloader.git /tmp/zqloader
           git -C /tmp/zqloader checkout "$ZQLOADER_REF"
           python3 - <<'PYFIX'
           from pathlib import Path
