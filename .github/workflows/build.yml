@@ -62,6 +62,13 @@ jobs:
           if s.count(old) != 1:
               raise SystemExit('unexpected ZQLoader SetPilotLength source')
           p.write_text(s.replace(old, new))
+          q = Path('/tmp/zqloader/main.cpp')
+          t = q.read_text()
+          old2 = '        // zqloader.SetCompressionType(CompressionType::none); // @DEBUG'
+          new2 = '        zqloader.SetCompressionType(CompressionType::none);'
+          if t.count(old2) != 1:
+              raise SystemExit('unexpected ZQLoader compression source')
+          q.write_text(t.replace(old2, new2))
           PYFIX
           cmake -S /tmp/zqloader -B /tmp/zqloader-build -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Qt6=ON
           cmake --build /tmp/zqloader-build --target zqloader -j2

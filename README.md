@@ -47,7 +47,7 @@ A successful build creates:
 
 `tools/package_release.py dist/zx-carrom.zip` makes the deterministic source-plus-release archive. No WAV release artifact is produced.
 
-The TAP validator checks framing, all XOR checksums, the BASIC header/data pair, the CODE header/data pair, machine-code length, load address `$8000` (32768), entry point 32768, and exact equality between the TAP CODE payload and the freshly assembled binary.
+The standard tape sequence is BASIC loader, full 6912-byte loading SCREEN$, game CODE, then entry at 32768. The SCREEN$ is generated deterministically from the checked-in 4x8 font and includes the complete key legend. The TAP validator checks all six blocks, XOR checksums, SCREEN$ address/size/content, machine-code length, load address `$8000` (32768), entry point 32768, and exact equality between the CODE payload and the freshly assembled binary.
 
 The final TZX is independently parsed and must contain:
 
@@ -60,7 +60,7 @@ The final TZX is independently parsed and must contain:
 - no explicit pause blocks;
 - **0 ms** pause on every data block.
 
-ZQLoader adds its normal 64-T-state end-of-byte delay to the final data pulse of each byte. `loader/tzx19to13.py` keeps the compact generalized-data stream and patches its fast leader in place; the legacy pulse-sequence path still shortens a leader across the whole contiguous stream rather than only its first chunk. The turbo bootstrap displays a visible Carrom loading banner before decoding the fast stream.
+ZQLoader adds its normal 64-T-state end-of-byte delay to the final data pulse of each byte. `loader/tzx19to13.py` keeps the compact generalized-data stream and patches its fast leader in place; the legacy pulse-sequence path still shortens a leader across the whole contiguous stream rather than only its first chunk. The turbo edition follows the same visible sequence as the standard tape: BASIC first, then the shared SCREEN$, then game bytes, then entry at 32768. Its payloads use the loader's direct-copy path so zero-gap transitions do not depend on decompression time.
 
 ## Audio
 
