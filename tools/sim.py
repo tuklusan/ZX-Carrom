@@ -110,8 +110,13 @@ def main():
             cols=[mem[0x5800+(10+i)*32+31] & 7 for i in range(4)]
             if cols == [2,6,4,5]:
                 ribbon_game = True
-            row0=[mem[0x4000+xb] for xb in range(32)]
-            if all(v == 0 for v in row0[:9]+row0[23:]) and any(row0[9:23]):
+            title_rows=[]
+            for yy in range(8):
+                base=paddr(0,yy)
+                title_rows.append([mem[base+xb] for xb in range(32)])
+            outer=[v for row in title_rows for v in row[:9]+row[23:]]
+            centre=[v for row in title_rows for v in row[9:23]]
+            if all(v == 0 for v in outer) and any(centre):
                 small_game_title = True
 
         def paddr(xb,y):
