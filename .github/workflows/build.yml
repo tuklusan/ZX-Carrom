@@ -38,6 +38,16 @@ jobs:
         run: |
           git clone https://github.com/oxidaan/zqloader.git /tmp/zqloader
           git -C /tmp/zqloader checkout "$ZQLOADER_REF"
+          python3 - <<'PYFIX'
+          from pathlib import Path
+          p = Path('/tmp/zqloader/turboblock.h')
+          s = p.read_text()
+          old = '        m_pilot_length = p_duration;\n    }'
+          new = '        m_pilot_length = p_duration;\n        return *this;\n    }'
+          if s.count(old) != 1:
+              raise SystemExit('unexpected ZQLoader SetPilotLength source')
+          p.write_text(s.replace(old, new))
+          PYFIX
           cmake -S /tmp/zqloader -B /tmp/zqloader-build -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Qt6=ON
           cmake --build /tmp/zqloader-build --target zqloader -j2
           /tmp/zqloader-build/zqloader version || true
