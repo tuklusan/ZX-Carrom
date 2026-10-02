@@ -371,6 +371,7 @@ draw_board:
         ld de,0x4000
         ld bc,6912
         ldir
+        call draw_title64
         ret
 
 ; restore just the board pixels (wipes every piece) and forget what was drawn
@@ -379,6 +380,7 @@ reset_board_pixels:
         ld de,0x4000
         ld bc,6144
         ldir
+        call draw_title64
         call star_redraw
         ld ix,BODIES
         ld b,NB
@@ -449,7 +451,7 @@ star_prepare:
         cp 168
         jr c,.prep_row
 
-        ; four 4x8 colour blocks just to the right of the board
+        ; four 4x8 colour blocks at the far-right screen edge
         ld c,80
         ld b,32
 .ribbon_px:
@@ -459,15 +461,15 @@ star_prepare:
         add a,BGOFF>>8
         ld d,a
         ld a,e
-        add a,27
+        add a,31
         ld e,a
         ld a,(de)
-        or 0x0F
+        or 0xF0
         ld (de),a
         pop bc
         inc c
         djnz .ribbon_px
-        ld hl,0xF800+10*32+27
+        ld hl,0xF800+10*32+31
         ld de,32
         ld (hl),0x42
         add hl,de
@@ -512,7 +514,10 @@ star_step:
         call stars_draw
         ld a,(star_near)
         inc a
-        and 31
+        cp 24
+        jr c,.near_store
+        xor a
+.near_store:
         ld (star_near),a
         ld hl,STAR_NEAR
         call stars_draw
@@ -525,7 +530,10 @@ star_step:
         call stars_draw
         ld a,(star_mid)
         inc a
-        and 31
+        cp 24
+        jr c,.mid_store
+        xor a
+.mid_store:
         ld (star_mid),a
         ld hl,STAR_MID
         call stars_draw
@@ -539,7 +547,10 @@ star_step:
         call stars_draw
         ld a,(star_far)
         inc a
-        and 31
+        cp 24
+        jr c,.far_store
+        xor a
+.far_store:
         ld (star_far),a
         ld hl,STAR_FAR
         jp stars_draw
@@ -556,7 +567,7 @@ stars_draw:
         ld b,a
         ld c,(hl)
         inc hl
-        ; hard clip: top/bottom HUD rows and the ribbon lane are protected
+        ; top/bottom HUD rows never participate in the moving field
         ld a,c
         cp 24
         jr c,.star
@@ -564,7 +575,7 @@ stars_draw:
         jr nc,.star
         push hl
         ld a,b
-        and 31
+        and 0x7F
         ld d,a
         ld a,(star_tmp)
         bit 7,b
@@ -572,44 +583,42 @@ stars_draw:
         ld e,a
         ld a,d
         sub e
-        and 31
-        ld b,a
+        jr nc,.left_ok
+        add a,24
+.left_ok:
+        ld b,a                  ; x = 0..23, safely west of the robot
         jr .plot
 .right:
         add a,d
-        and 31
+        cp 24
+        jr c,.right_ok
+        sub 24
+.right_ok:
         or 224
-        ld b,a
+        ld b,a                  ; x = 224..247, east stars only
 .plot:
-        ld a,b
-        cp 216
-        jr c,.draw
-        cp 224
-        jr c,.skip
-.draw:
         call plot_xor
-.skip:
         pop hl
         jr .star
 
 STAR_FAR:
-        db 4,31,11,53,19,77,27,112,7,143,22,159
-        db 228,38,235,68,251,94,230,126,252,150,239,157
-        ; two small spiral clusters
+        db 4,31,11,53,19,77,3,112,7,143,22,159
+        db 132,38,139,68,147,94,134,126,148,150,143,157
+        ; slow spiral-like galaxy clusters
         db 16,96,14,96,18,96,16,94,17,98,13,97,19,95
-        db 231,118,229,118,233,118,231,116,232,120,228,119,234,117
+        db 135,118,133,118,137,118,135,116,136,120,132,119,138,117
         db 255
 STAR_MID:
-        db 6,28,15,44,25,64,9,84,28,105,13,130,21,150
-        db 229,30,237,52,251,73,232,101,250,122,236,144,228,162
-        ; two closer galaxy shapes
-        db 24,124,22,124,26,124,24,122,25,126,21,125,27,123
-        db 251,62,249,62,253,62,251,60,252,64,248,63,254,61
+        db 6,28,15,44,1,64,9,84,4,105,13,130,21,150
+        db 133,30,141,52,147,73,136,101,146,122,140,144,132,162
+        ; mid-depth galaxy clusters
+        db 0,124,22,124,2,124,0,122,1,126,21,125,3,123
+        db 147,62,145,62,149,62,147,60,148,64,144,63,150,61
         db 255
 STAR_NEAR:
         ; paired points become short fast streaks
-        db 5,36,7,36,18,58,20,58,29,88,31,88,10,118,12,118,24,146,26,146
-        db 229,45,231,45,238,82,240,82,252,110,250,110,231,136,233,136,250,158,252,158
+        db 5,36,7,36,18,58,20,58,5,88,7,88,10,118,12,118,0,146,2,146
+        db 133,45,135,45,142,82,144,82,148,110,146,110,135,136,137,136,146,158,148,158
         db 255
 
 ; erase rectangle from the clean copy: B=tlx C=tly D=bytes wide E=rows
@@ -911,6 +920,11 @@ center64:
         cp 64
         jr c,.col
         ret
+
+draw_title64:
+        ld hl,S_TITLE
+        ld b,0
+        jp center64
 
 ; message buffer (status line, row 23, 64 columns, printed centred)
 msg_clear:

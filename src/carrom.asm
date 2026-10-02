@@ -396,6 +396,7 @@ S_MATCH:    db "MATCH TO ",0
 S_STARS:    db " - NEW MATCH",0
 S_PAUSED:   db "** PAUSED - PRESS SPACE **",0
 S_PRESS:    db "PRESS ANY KEY",0
+S_TITLE:    db "SANYALnet Labs  Carrom Arena",0
 S_SND0:     db "SOUND: MUSIC AND EFFECTS",0
 S_SND1:     db "SOUND: EFFECTS ONLY",0
 S_SND2:     db "SOUND OFF",0

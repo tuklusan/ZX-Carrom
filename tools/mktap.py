@@ -91,7 +91,7 @@ def make_screen():
     for i in range(4):
         yy=80+i*8
         for y in range(yy,yy+8):
-            for x in range(220,224):
+            for x in range(248,252):
                 pset(x,y)
 
     attrs=[
@@ -107,7 +107,7 @@ def make_screen():
         for col in range(9,23):
             s[6144+row*32+col]=0x45
     for i,ink in enumerate((2,6,4,5)):
-        s[6144+(10+i)*32+27]=0x40|ink
+        s[6144+(10+i)*32+31]=0x40|ink
     return bytes(s)
 
 def block(flag,data):

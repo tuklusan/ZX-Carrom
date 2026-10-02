@@ -73,7 +73,7 @@ The audio authority is `https://github.com/tuklusan/ZX-Spectrum-1-Bit-Routines`.
 
 ## Controls and play
 
-The shared loading picture uses the 4x8 project font for its key legend.  On machine-code entry, the load notice is replaced in place by a flashing small-font prompt.  During play, three independently paced star layers stream outward beside the board, with slower clustered galaxy shapes behind the faster streaks; the loading and play screens also carry the four-block red/yellow/green/cyan spectrum ribbon.
+The shared loading picture uses the 4x8 project font for its key legend. On machine-code entry, the load notice is replaced in place by a flashing small-font prompt. The play screen title is also rendered with the 4x8 font. During play, three independently paced star layers stream outward beside the board, with slower clustered galaxy shapes behind the faster streaks. The east field is confined to its own outer strip, with a safety gap beside the east robot, and the red/yellow/green/cyan ribbon sits at the far-right edge.
 
 Four robot players operate autonomously; RED is North/South and BLUE is East/West.
 
