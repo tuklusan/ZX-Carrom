@@ -47,9 +47,9 @@ The TAP validator checks framing, all XOR checksums, the BASIC header/data pair,
 
 The final TZX is independently parsed and must contain:
 
-- ROM pilot 1: **512 pulses**;
-- ROM pilot 2: **512 pulses**;
-- fast leader: **256 pulses at 10000 T-states each**;
+- ROM pilot 1: **2824 pulses**;
+- ROM pilot 2: **2420 pulses**;
+- fast leader: **256 pulses at 1710 T-states each**;
 - turbo zero pulse: **855 T-states**;
 - turbo one pulse: **1710 T-states**;
 - no explicit pause blocks;

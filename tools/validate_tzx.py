@@ -3,9 +3,9 @@
 from pathlib import Path
 import argparse, collections, struct
 
-ROM_PILOTS = [512, 512]
+ROM_PILOTS = [2824, 2420]
 FAST_LEADER = 256
-FAST_LEADER_PULSE = 10000
+FAST_LEADER_PULSE = 1710
 ZERO = 855
 ONE = 1710
 BYTE_DELAY = 64

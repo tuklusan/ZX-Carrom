@@ -2,7 +2,7 @@
 """Finalize ZQLoader TZX output for Carrom Arena.
 
 - expands generalized-data (0x19) blocks into portable pulse-sequence (0x13) blocks;
-- shortens every ROM-loader turbo-data pilot to SHORT_ROM_PILOT pulses;
+- preserves the cold-loadable ROM-loader turbo-data pilots;
 - shortens the leading 2x ZQLoader pulse train to SHORT_FAST_LEADER pulses;
 - removes every explicit pause block and forces per-block pauses to 0 ms.
 
@@ -10,9 +10,9 @@ The result is a continuous tape image with short headers and no inserted silence
 """
 import sys, struct
 
-SHORT_ROM_PILOT = 512
+ROM_PILOTS = [2824, 2420]
 SHORT_FAST_LEADER = 256
-FAST_LEADER_PULSE = 10000
+FAST_LEADER_PULSE = 1710
 
 def u16(b, o): return struct.unpack_from('<H', b, o)[0]
 def u32(b, o): return struct.unpack_from('<I', b, o)[0]
@@ -88,6 +88,7 @@ def convert(src, dst):
     o = 10
     n19 = n20 = n11 = n13 = 0
     fast_leader_done = False
+    rom_index = 0
 
     while o < len(d):
         bid = d[o]; o += 1
@@ -124,8 +125,13 @@ def convert(src, dst):
             n20 += 1                     # deliberately omit all silent gaps
         elif bid == 0x11:
             body = bytearray(d[o:o + ln])
+            if rom_index >= len(ROM_PILOTS):
+                raise ValueError('unexpected extra ROM turbo block')
             pilot_count = u16(body, 10)
-            struct.pack_into('<H', body, 10, min(pilot_count, SHORT_ROM_PILOT))
+            expected = ROM_PILOTS[rom_index]
+            if pilot_count != expected:
+                raise ValueError(f'ROM pilot {rom_index + 1} is {pilot_count}, expected {expected}')
+            rom_index += 1
             struct.pack_into('<H', body, 13, 0)  # zero post-block pause
             out += bytes([bid]) + body
             n11 += 1
@@ -140,8 +146,10 @@ def convert(src, dst):
         else:
             out += bytes([bid]) + d[o:o + ln]
         o += ln
+    if rom_index != len(ROM_PILOTS):
+        raise ValueError(f'expected {len(ROM_PILOTS)} ROM turbo blocks, saw {rom_index}')
     open(dst, 'wb').write(out)
-    print(f"{dst}: {n11} ROM blocks shortened, {n19} generalized fast block(s) expanded, "
+    print(f"{dst}: {n11} ROM blocks preserved, {n19} generalized fast block(s) expanded, "
           f"{n13} existing pulse block(s) normalized, {n20} pause block(s) removed")
 
 if __name__ == '__main__':
