@@ -103,6 +103,8 @@ def normalize(lines):
             continue
         line=re.sub(r'\bDC\b', 'db', line, flags=re.I)
         line=re.sub(r'0b([01]+)', r'%\1', line, flags=re.I)
+        # SjASMPlus accepts JP HL/IX/IY; Pasmo uses the canonical JP (reg).
+        line=re.sub(r'\bjp\s+(HL|IX|IY)\b', r'jp (\1)', line, flags=re.I)
         line=line.replace('" Loading...\\r"', '" Loading...",13')
         line=line.replace('"ERROR\\r"', '"ERROR",13')
         line=line.replace('"DEBUG\\r"', '"DEBUG",13')
