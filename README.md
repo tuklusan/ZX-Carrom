@@ -24,6 +24,16 @@ Generated font, board-table, and music assets are checked in. `python3 build.py 
 
 The clean Ubuntu GitHub Actions build pins and compiles the Pasmo fork and ZQLoader host tool from source, runs two production builds, compares their game binary/TAP/TZX/release ZIP byte-for-byte, validates the tape structures, records SHA-256 hashes, and uploads the release artifact.
 
+## Repository vocabulary gate
+
+This repository includes tracked local hooks plus the same checker in the build workflow. Activate the hooks once in each clone:
+
+```text
+git config core.hooksPath .githooks
+```
+
+The local checks reject restricted vocabulary in the complete staged index and in the proposed commit message. The build workflow repeats the check against the committed tree and current commit message, so bypassing a local hook does not produce a passing build.
+
 ## Release files
 
 A successful build creates:

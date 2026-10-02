@@ -24,6 +24,10 @@ jobs:
         with:
           clean: true
 
+      - name: Repository vocabulary gate
+        run: |
+          python3 tools/check_restricted_terms.py --tree --head-message
+
       - name: Install build dependencies
         run: |
           sudo apt-get update
