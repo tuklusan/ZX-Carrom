@@ -110,7 +110,12 @@ def pasmo_expressions(lines):
         code = code.replace('&', ' AND ')
         # Pasmo ships ALIGN as an example macro rather than a built-in directive.
         # Expand the simple constant alignments used by the game deterministically.
-        m = re.match(r'^(\s*)align\s+(.+?)\s*    return out
+        m = re.match(r'^(\s*)align\s+(.+?)\s*$', code, re.I)
+        if m:
+            indent, n = m.groups()
+            code = f'{indent}ORG (($ + ({n}) - 1) / ({n})) * ({n})'
+        out.append(code + (sep + comment if sep else ''))
+    return out
 
 
 def normalize(lines):
