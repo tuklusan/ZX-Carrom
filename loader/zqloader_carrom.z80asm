@@ -48,6 +48,8 @@
 ROM_CLS                 EQU 0x0daf      // cls, also opens print channel 2
 CHAN_OPEN               EQU 0x1601         
 PROG                    EQU 23755       // Zx spectrum system start of basic
+STACK_SAVE              EQU 0x5B00     // private two-byte save slot in printer buffer
+UPPER_SAVE              EQU 0x5B02     // saved high-memory bytes while upper loader runs
 SCR_CT                  EQU 23692       // avoid Scroll?
 
 SCREEN_23RD             EQU 16384+4*1024
@@ -140,6 +142,14 @@ ASM_START:
     rrca                        // carry = ENTER not pressed
     jr nc, .wait_enter
 
+
+    // Preserve BASIC's live high-memory stack, then use a private stack below the game.
+    ld (STACK_SAVE), SP
+    ld SP, 32767
+    ld HL, ASM_UPPER_START
+    ld DE, UPPER_SAVE
+    ld BC, ASM_UPPER_LEN
+    ldir
 
     // move loader to upper regions. (to avoid contended memory)
     // this can be overwritten when loading last block.
@@ -307,11 +317,17 @@ ERROR:
     call PRINT
 
 END_TO_BASIC:
+    // Restore the high-memory bytes hidden by the relocated upper loader.
+    ld HL, UPPER_SAVE
+    ld DE, ASM_UPPER_START
+    ld BC, ASM_UPPER_LEN
+    ldir
     // not needed exx
         pop BC                  // #PP5
         pop HL                  // #PP2
         pop DE                  // #PP1
     exx  
+    ld SP, (STACK_SAVE)
  IFDEF DEBUG
     ld BC, (m_load_address)     // @DEBUG show at basic
  ENDIF
