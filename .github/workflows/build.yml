@@ -31,7 +31,9 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends g++ cmake make git python3 python3-venv\n          python3 -m venv /tmp/zxrun\n          /tmp/zxrun/bin/pip install --disable-pip-version-check skoolkit==10.1 pillow
+          sudo apt-get install -y --no-install-recommends g++ cmake make git python3 python3-venv
+          python3 -m venv /tmp/zxrun
+          /tmp/zxrun/bin/pip install --disable-pip-version-check skoolkit==10.1 pillow
 
       - name: Build Pasmo from authoritative fork
         run: |
