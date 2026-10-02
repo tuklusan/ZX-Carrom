@@ -1,5 +1,5 @@
 //==============================================================================
-// Carrom Arena ZX: ZQLoader (https://github.com/oxidaan/zqloader, MIT licence,
+// Carrom Arena ZX: ZQLoader (https://github.com/tuklusan/zqloader, MIT licence,
 // Copyright (c) 2025 Daan Scherft [Oxidaan]) adapted to live inside the game's own
 // BASIC loader.  Changes from upstream zqloader.z80asm:
 //   - the BASIC is the Carrom Arena title page (zq_basic.inc, written by mktap.py),
