@@ -104,13 +104,14 @@ start:
         ld hl,BOARD_RLE
         ld de,BGBUF
         call unrle
-        ; the BASIC screen is the title page: theme until a key is pressed
+        call star_prepare
+        ; keep the loaded picture up; replace its load notice with the small prompt
         ld hl,S_PRESS
-        ld bc,19*256+8
-        call print_at
-        ld hl,0x5800+19*32+8
-        ld b,15
-4:      ld (hl),0x86            ; flashing yellow
+        ld b,17
+        call center64
+        ld hl,0x5800+17*32+12
+        ld b,7
+4:      ld (hl),0xC6            ; flashing bright yellow
         inc hl
         djnz 4B
         ld hl,SONG_TITLE
@@ -125,6 +126,7 @@ start:
         xor a
         ld (keys_last),a
         call draw_board
+        call star_reset
         call gm_reset
         ld a,1
         ld (gm_run),a
@@ -162,6 +164,7 @@ main_loop:
         ld a,(paused)
         or a
         jr nz,main_loop
+        call star_step
         ld a,(note_t)           ; a sound-mode notice gives the status line back
         or a
         jr z,2F
@@ -280,6 +283,7 @@ k_restart:
         and 8
         call nz,halo_xor        ; halo currently shown: take it off
 1:      call draw_board
+        call star_redraw
         ld a,0xFF
         ld (robot_drawn),a
         ld (robot_drawn+1),a
@@ -391,7 +395,7 @@ S_TO:       db " TO ",0
 S_MATCH:    db "MATCH TO ",0
 S_STARS:    db " - NEW MATCH",0
 S_PAUSED:   db "** PAUSED - PRESS SPACE **",0
-S_PRESS:    db " PRESS ANY KEY ",0
+S_PRESS:    db "PRESS ANY KEY",0
 S_SND0:     db "SOUND: MUSIC AND EFFECTS",0
 S_SND1:     db "SOUND: EFFECTS ONLY",0
 S_SND2:     db "SOUND OFF",0
@@ -634,6 +638,12 @@ sw_idi:         db 0
 sw_fi:          db 0
 sw_k:           db 0
 rb_old:         db 0
+; moving space backdrop
+star_far:       db 0
+star_mid:       db 0
+star_near:      db 0
+star_frame:     db 0
+star_tmp:       db 0
 ; sound
 snd_mode:       db 0
 music_off:      db 0

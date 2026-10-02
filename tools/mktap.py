@@ -81,12 +81,18 @@ def make_screen():
     for x,y in ((112,78),(122,82),(133,79),(116,92),(128,89),(138,94),(124,100)):
         ring(x,y,2)
 
-    centre(132,"LOADING MATCH...",1)
+    centre(136,"LOADING MATCH...",1)
     text(12,146,"SPACE PAUSE/RESUME")
     text(156,146,"F FAST/NORMAL")
     text(12,158,"M SOUND MODE")
     text(156,158,"R NEW MATCH")
     centre(174,"Q QUIT TO BASIC",1)
+
+    for i in range(4):
+        yy=80+i*8
+        for y in range(yy,yy+8):
+            for x in range(220,224):
+                pset(x,y)
 
     attrs=[
         (0,4,0x4F),
@@ -100,6 +106,8 @@ def make_screen():
     for row in range(6,16):
         for col in range(9,23):
             s[6144+row*32+col]=0x45
+    for i,ink in enumerate((2,6,4,5)):
+        s[6144+(10+i)*32+27]=0x40|ink
     return bytes(s)
 
 def block(flag,data):

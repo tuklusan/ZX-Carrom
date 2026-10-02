@@ -379,6 +379,7 @@ reset_board_pixels:
         ld de,0x4000
         ld bc,6144
         ldir
+        call star_redraw
         ld ix,BODIES
         ld b,NB
 1:      ld (ix+BDRAWN),0
@@ -413,6 +414,190 @@ plot_xor:
         ret
 
 BITMASK: db 128,64,32,16,8,4,2,1
+
+; ---------------------------------------------------------------- moving space backdrop
+; Outer side strips stream away from the board.  Near/mid/far layers move at
+; different frame rates.  Clustered points in the far and mid sets form tiny
+; spiral-like galaxies that travel with their layer.
+
+star_prepare:
+        ; remove the old fixed margin dots from the clean board copy
+        ld c,24
+.prep_row:
+        push bc
+        call row_de
+        ld a,d
+        add a,BGOFF>>8
+        ld d,a
+        xor a
+        ld b,5
+.prep_l:
+        ld (de),a
+        inc e
+        djnz .prep_l
+        ld a,e
+        add a,22
+        ld e,a
+        ld b,5
+.prep_r:
+        ld (de),a
+        inc e
+        djnz .prep_r
+        pop bc
+        inc c
+        ld a,c
+        cp 168
+        jr c,.prep_row
+
+        ; four 4x8 colour blocks just to the right of the board
+        ld c,80
+        ld b,32
+.ribbon_px:
+        push bc
+        call row_de
+        ld a,d
+        add a,BGOFF>>8
+        ld d,a
+        ld a,e
+        add a,27
+        ld e,a
+        ld a,(de)
+        or 0x0F
+        ld (de),a
+        pop bc
+        inc c
+        djnz .ribbon_px
+        ld hl,0xF800+10*32+27
+        ld de,32
+        ld (hl),0x42
+        add hl,de
+        ld (hl),0x46
+        add hl,de
+        ld (hl),0x44
+        add hl,de
+        ld (hl),0x45
+        ret
+
+star_reset:
+        xor a
+        ld (star_far),a
+        ld (star_mid),a
+        ld (star_near),a
+        ld a,(frames)
+        ld (star_frame),a
+        jr star_redraw
+
+star_redraw:
+        ld hl,STAR_FAR
+        ld a,(star_far)
+        call stars_draw
+        ld hl,STAR_MID
+        ld a,(star_mid)
+        call stars_draw
+        ld hl,STAR_NEAR
+        ld a,(star_near)
+        jp stars_draw
+
+star_step:
+        ld a,(frames)
+        ld b,a
+        ld a,(star_frame)
+        cp b
+        ret z
+        ld a,b
+        ld (star_frame),a
+
+        ld hl,STAR_NEAR
+        ld a,(star_near)
+        call stars_draw
+        ld a,(star_near)
+        inc a
+        and 31
+        ld (star_near),a
+        ld hl,STAR_NEAR
+        call stars_draw
+
+        ld a,(star_frame)
+        and 1
+        jr nz,.far_test
+        ld hl,STAR_MID
+        ld a,(star_mid)
+        call stars_draw
+        ld a,(star_mid)
+        inc a
+        and 31
+        ld (star_mid),a
+        ld hl,STAR_MID
+        call stars_draw
+
+.far_test:
+        ld a,(star_frame)
+        and 3
+        ret nz
+        ld hl,STAR_FAR
+        ld a,(star_far)
+        call stars_draw
+        ld a,(star_far)
+        inc a
+        and 31
+        ld (star_far),a
+        ld hl,STAR_FAR
+        jp stars_draw
+
+; HL -> x,y pairs; A = horizontal phase.  Left points move left, right points
+; move right, wrapping at the outer edge of each 32-pixel side strip.
+stars_draw:
+        ld (star_tmp),a
+.star:
+        ld a,(hl)
+        inc hl
+        cp 255
+        ret z
+        ld b,a
+        ld c,(hl)
+        inc hl
+        push hl
+        ld a,b
+        and 31
+        ld d,a
+        ld a,(star_tmp)
+        bit 7,b
+        jr nz,.right
+        ld e,a
+        ld a,d
+        sub e
+        and 31
+        ld b,a
+        jr .plot
+.right:
+        add a,d
+        and 31
+        or 224
+        ld b,a
+.plot:
+        call plot_xor
+        pop hl
+        jr .star
+
+STAR_FAR:
+        db 4,31,11,53,19,77,27,112,7,143,22,159
+        db 228,38,235,68,251,94,230,126,252,150,239,157
+        ; two small spiral clusters
+        db 16,96,14,96,18,96,16,94,17,98,13,97,19,95
+        db 231,118,229,118,233,118,231,116,232,120,228,119,234,117
+        db 255
+STAR_MID:
+        db 6,28,15,44,25,64,9,84,28,105,13,130,21,150
+        db 229,30,237,52,251,73,232,101,250,122,236,144,228,162
+        ; two closer galaxy shapes
+        db 24,124,22,124,26,124,24,122,25,126,21,125,27,123
+        db 251,62,249,62,253,62,251,60,252,64,248,63,254,61
+        db 255
+STAR_NEAR:
+        ; paired points become short fast streaks
+        db 5,36,7,36,18,58,20,58,29,88,31,88,10,118,12,118,24,146,26,146
+        db 229,45,231,45,238,82,240,82,252,110,250,110,231,136,233,136,250,158,252,158
+        db 255
 
 ; erase rectangle from the clean copy: B=tlx C=tly D=bytes wide E=rows
 erase_rect:

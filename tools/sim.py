@@ -75,14 +75,35 @@ def main():
     pause_frozen = True
     pause_resumed = False
     restart_seen = False
+    intro_prompt = False
+    ribbon_intro = False
+    ribbon_game = False
+    star_far_seen = set()
+    star_mid_seen = set()
+    star_near_seen = set()
     play_msgs = 0
     strikes = 0
     stray_total = 0
     def draw(scr, frame, border, kb):
         nonlocal song_prev, song_wraps, pause_ref, pause_frozen, pause_resumed, restart_seen
+        nonlocal intro_prompt, ribbon_intro, ribbon_game
         now_s = (regs[T] - t0) / 3500000
         for i in range(8): kb[i] = 0
         if a.nogroove: mem[sym['gm_run']] = 0
+        if 0.4 <= now_s < 1.4:
+            aa=[mem[0x5800+17*32+c] for c in range(12,19)]
+            if aa and all(v & 0x80 for v in aa):
+                intro_prompt = True
+            cols=[mem[0x5800+(10+i)*32+27] & 7 for i in range(4)]
+            if cols == [2,6,4,5]:
+                ribbon_intro = True
+        if 2.0 <= now_s < 5.0:
+            star_far_seen.add(mem[sym['star_far']])
+            star_mid_seen.add(mem[sym['star_mid']])
+            star_near_seen.add(mem[sym['star_near']])
+            cols=[mem[0x5800+(10+i)*32+27] & 7 for i in range(4)]
+            if cols == [2,6,4,5]:
+                ribbon_game = True
         if os.environ.get('HUDTEST') and now_s > 3:
             mem[sym['score']] = 125; mem[sym['score']+1] = 7; mem[sym['boards_won']] = 12; mem[sym['boards_won']+1] = 3
             mem[sym['games_won']] = 10; mem[sym['games_won']+1] = 1; mem[sym['dues']] = 1
@@ -107,7 +128,7 @@ def main():
                 if song_prev is not None and p < song_prev and now_s < 74.0:
                     song_wraps += 1
                 song_prev = p
-            state = (mem[sym['phase']], mem[sym['timer']], mem[sym['ticks']] | (mem[sym['ticks'] + 1] << 8), mem[sym['seat']], mem[sym['gm_songp']] | (mem[sym['gm_songp'] + 1] << 8))
+            state = (mem[sym['phase']], mem[sym['timer']], mem[sym['ticks']] | (mem[sym['ticks'] + 1] << 8), mem[sym['seat']], mem[sym['gm_songp']] | (mem[sym['gm_songp'] + 1] << 8), mem[sym['star_far']], mem[sym['star_mid']], mem[sym['star_near']])
             if mem[sym['paused']] and now_s >= 13.3:
                 if pause_ref is None:
                     pause_ref = state
@@ -191,6 +212,9 @@ def main():
             'effects idle': mem[sym['sfx_busy']] == 0,
             'phase sane': phases_seen and max(phases_seen) <= 11,
             'screen clean': stray_total == 0,
+            'small flashing intro': intro_prompt,
+            'spectrum ribbon': ribbon_intro and ribbon_game,
+            'space parallax': len(star_near_seen) > len(star_mid_seen) > len(star_far_seen) >= 8,
         }
         for name, ok in checks.items():
             print(f"runtime {name}: {'PASS' if ok else 'FAIL'}")
