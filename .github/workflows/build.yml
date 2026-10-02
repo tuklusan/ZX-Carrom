@@ -18,7 +18,8 @@ jobs:
     timeout-minutes: 20
     env:
       PASMO_REF: ef6d399c770a30fbd8bdaa7272ccc7e2b0bcf0dd
-      ZQLOADER_REF: ca5913fb563be1903f70aab9e88b0497606769f4\n      SKOOLKIT_REF: 5a46d5066f9ceafee70aa9020de88437971cc714
+      ZQLOADER_REF: ca5913fb563be1903f70aab9e88b0497606769f4
+      SKOOLKIT_REF: 5a46d5066f9ceafee70aa9020de88437971cc714
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,7 +34,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends g++ cmake make git python3 python3-venv
           python3 -m venv /tmp/zxrun
-          git clone https://github.com/tuklusan/skoolkit.git /tmp/skoolkit\n          git -C /tmp/skoolkit checkout "$SKOOLKIT_REF"\n          /tmp/zxrun/bin/pip install --disable-pip-version-check /tmp/skoolkit pillow
+          git clone https://github.com/tuklusan/skoolkit.git /tmp/skoolkit
+          git -C /tmp/skoolkit checkout "$SKOOLKIT_REF"
+          /tmp/zxrun/bin/pip install --disable-pip-version-check /tmp/skoolkit pillow
 
       - name: Build Pasmo from authoritative fork
         run: |
