@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: zx-carrom-clean-build
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
