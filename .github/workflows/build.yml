@@ -47,6 +47,20 @@ jobs:
           make -j2
           ./pasmo --version || true
 
+      - name: Measure current boundary
+        run: |
+          python3 tools/prepare_pasmo.py /tmp/carrom_diag.asm
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('/tmp/carrom_diag.asm')
+          s = p.read_text()
+          s = s.replace('    .ERROR assertion failed: vars_end < BGBUF',
+                        '    ; boundary measurement only')
+          p.write_text(s)
+          PY
+          /tmp/pasmo/pasmo --bin --pass3 /tmp/carrom_diag.asm /tmp/carrom_diag.bin /tmp/carrom_diag.sym
+          grep -E '^(QSQ|code_end|vars_end|BGBUF)' /tmp/carrom_diag.sym
+
       - name: Clean production build 1
         env:
           PASMO: /tmp/pasmo/pasmo
