@@ -68,8 +68,6 @@ def parse_gdb(body):
     for _ in range(asp if totp else 0):
         if p + 1 + 2 * npp > len(body):
             raise ValueError('truncated generalized pilot table')
-        if body[p] & 3:
-            raise ValueError('unsupported generalized pilot edge mode')
         vals = [u16(body, p + 1 + 2*k) for k in range(npp)]
         psyms.append([x for x in vals if x])
         p += 1 + 2 * npp
@@ -85,8 +83,6 @@ def parse_gdb(body):
     for _ in range(asd if totd else 0):
         if p + 1 + 2 * npd > len(body):
             raise ValueError('truncated generalized data table')
-        if body[p] & 3:
-            raise ValueError('unsupported generalized data edge mode')
         vals = [u16(body, p + 1 + 2*k) for k in range(npd)]
         dsyms.append([x for x in vals if x])
         p += 1 + 2 * npd
