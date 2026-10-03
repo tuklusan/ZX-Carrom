@@ -378,7 +378,7 @@ def main():
         ppc = mem[23621] | (mem[23622] << 8)
         subppc = mem[23623]
         report = mem[23610]
-        ok = mem[sym['gm_run']] == 0 and report == 8 and ppc == 20 and subppc == 1
+        ok = mem[sym['gm_run']] == 0 and report == 8 and ppc == 20 and subppc == 2
         print(f"runtime quit BASIC return: {'PASS' if ok else 'FAIL'} pc={pc} report={report + 1} line={ppc}:{subppc}")
         if not ok:
             raise SystemExit('quit return check failed')
