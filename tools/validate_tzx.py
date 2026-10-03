@@ -5,7 +5,7 @@ import argparse
 import struct
 
 PROG = 23755
-LOADER_ADDR = 23797
+LOADER_ADDR = 23784
 ROM_PILOT = 2168
 ROM_SYNC1 = 667
 ROM_SYNC2 = 735

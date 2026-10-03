@@ -3,7 +3,7 @@
 ; Sequence: loading screen, game, then CALL 32768.
 ; Each fast data bit is one edge interval: zero 855 T, one 1710 T.
 
-        ORG 23797
+        ORG 23784
 
 PILOT_MIN   EQU 30
 SYNC_MIN    EQU 5
@@ -11,6 +11,7 @@ BIT_SPLIT   EQU 27
 
 loader_start:
         di
+        ld sp,0x7FF0
         ld hl,0x4000
         ld ix,6912
         call load_block
@@ -23,13 +24,13 @@ loader_start:
 
         ei
         call 0x8000
-        ret
+        jp 0
 
 load_error:
         ld a,2
         out (0xFE),a
         ei
-        ret
+        jp 0
 
 ; HL destination, IX payload byte count.
 ; Reads one fixed fast block, then verifies two rolling checksum bytes.

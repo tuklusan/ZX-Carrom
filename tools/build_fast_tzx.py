@@ -5,7 +5,7 @@ import argparse
 import struct
 
 PROG = 23755
-LOADER_ADDR = 23797
+LOADER_ADDR = 23784
 ROM_PILOT = 2168
 ROM_SYNC1 = 667
 ROM_SYNC2 = 735
@@ -15,7 +15,6 @@ ROM_PILOTS = (2824, 2420)
 FAST_PILOT = 1710
 FAST_PULSES = 256
 
-TOK_CLEAR = 0xFD
 TOK_RANDOMIZE = 0xF9
 TOK_USR = 0xC0
 TOK_STOP = 0xE2
@@ -54,7 +53,7 @@ def basic_header(length):
 
 
 def basic_program(loader):
-    l10 = line(10, TOK_CLEAR, num(32767), ':', TOK_RANDOMIZE, TOK_USR, num(LOADER_ADDR))
+    l10 = line(10, TOK_RANDOMIZE, TOK_USR, num(LOADER_ADDR))
     l20 = line(20, TOK_STOP)
     l200 = line(200, TOK_REM, loader)
     actual = PROG + len(l10) + len(l20) + 5
