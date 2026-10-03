@@ -55,7 +55,7 @@ The fast TZX is deliberately fixed and small. It contains exactly four blocks:
 3. loading screen — compact generalized-data block `0x19`;
 4. game — compact generalized-data block `0x19`.
 
-The resident loader is assembled directly from `loader/turbo_loader.asm` with Pasmo and lives in a BASIC REM line. Its control flow is fixed: load the screen, verify it, load the game, verify it, then call 32768. It has no next-block state after the game.
+The BASIC REM line contains a 32-byte bootstrap plus a padded copy of the fast decoder. The bootstrap, assembled from `loader/turbo_bootstrap.asm`, copies the decoder to uncontended RAM at `$FB00`, installs a three-byte return stub at `$7F00`, and jumps to the high copy. The decoder, assembled from `loader/turbo_loader.asm`, has fixed control flow: load and verify the screen, load and verify the game, install the safe return address, then jump to 32768. It has no next-block state after the game.
 
 Fast-block requirements are:
 
@@ -94,12 +94,13 @@ Four robot players operate autonomously; RED is North/South and BLUE is East/Wes
 
 ## Memory map
 
-The main program starts at `$8000`. Board pixels use `$E000-$F7FF`, board attributes `$F800-$FAFF`, the IM2 jump/vector area is `$FDFD/$FE00`, and the game stack is below `$FDF0`. The BASIC loader uses `CLEAR 32767` and starts the machine code with `RANDOMIZE USR 32768`.
+The main program starts at `$8000`. Board pixels use `$E000-$F7FF`, board attributes `$F800-$FAFF`, the IM2 jump/vector area is `$FDFD/$FE00`, and the game stack is below `$FDF0`. The standard TAP still uses `CLEAR 32767` and `RANDOMIZE USR 32768`. The fast TZX instead auto-runs the resident bootstrap at 23784, copies the timing-critical decoder to `$FB00`, and puts its post-game reset stub at `$7F00`. The decoder is no longer needed once the game has started.
 
 ## Project layout
 
 - `src/` — game, physics, robots, rendering, generated assets, and audio source.
-- `loader/turbo_loader.asm` — production fixed-sequence turbo loader.
+- `loader/turbo_bootstrap.asm` — resident BASIC bootstrap that relocates the decoder.
+- `loader/turbo_loader.asm` — production fixed-sequence decoder, executed from uncontended high RAM.
 - `loader/frozen/` — locked game and loading-screen tape inputs.
 - `loader/` — also retains the earlier ZQLoader adaptation and licence for provenance/reference.
 - `tools/` — Pasmo preparation, tape builders/validators, simulator, and deterministic packager.
@@ -110,7 +111,7 @@ The main program starts at `$8000`. Board pixels use `$E000-$F7FF`, board attrib
 
 ## Verification status
 
-Acceptance is emulator-based; no real-hardware claim is made. The workflow first requires the exact delivered fast TZX to reach game entry in Fuse with loader acceleration disabled. The generalized blocks are expanded only for the secondary cycle-level snapshot tool used by the longer deterministic checks.
+Acceptance is emulator-based; no real-hardware claim is made. The workflow first requires the exact delivered fast TZX to reach game entry in Fuse both with normal settings and with loader acceleration disabled. The generalized blocks are expanded only for the secondary cycle-level snapshot tool used by the longer deterministic checks.
 
 Because the new loader has a fixed two-payload sequence, reaching game entry means the complete final payload and its checksum have already been consumed. The TZX validator also proves that the game block is physically the final tape block.
 
