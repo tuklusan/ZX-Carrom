@@ -660,8 +660,20 @@ BIT_LOOP_MAX+*:     ld D, ONE_MAX               // eg 12 can also be set from C+
     ld A, B
 .bit_one_threshld+1: cp ONE_MAX-ZERO_MAX         // @E (eg 12-3=9) Becomes a '1' when E > B
 
-    rl L    
-    jp nc, .next_bit            // endmarker @ L reached?    
+    rl L
+    jr c, .last_bit_second_pulse
+
+    // Standard turbo TZX data has two equal pulses for every bit.
+    // The first pulse above selects zero/one; consume the second here.
+    ld B, D
+    call WAIT_FOR_EDGE
+    ret z
+    jp .next_bit
+
+.last_bit_second_pulse:
+    ld B, D
+    call WAIT_FOR_EDGE
+    ret z
 
     // -- We now have a new byte in L --
 

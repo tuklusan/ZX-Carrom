@@ -1,47 +1,24 @@
 #!/usr/bin/env python3
-"""Independently parse and validate the accepted pulse-stream fast TZX."""
+"""Independently parse and validate the compact fast TZX."""
 from pathlib import Path
 import argparse, collections, struct
 
 ROM_PILOTS = [2824, 2420]
 FAST_LEADER = 256
-FAST_LEADER_PULSE = 1710
+FAST_PULSE = 1710
 ZERO = 855
 ONE = 1710
-BYTE_DELAY = 64
 HEADER_LEN = 17
 SCREEN_LEN = 6912
-MAX_SIZE = 1024 * 1024
+MAX_SIZE = 65536
+EXPECTED_IDS = [0x30, 0x11, 0x11, 0x11, 0x12, 0x14, 0x11, 0x12, 0x14]
 
 
 def u16(d, o): return struct.unpack_from('<H', d, o)[0]
 def u24(d, o): return int.from_bytes(d[o:o+3], 'little')
-def u32(d, o): return struct.unpack_from('<I', d, o)[0]
 
 
-def decode_bytes(pulses, pos, count, label):
-    out = bytearray()
-    for byte_index in range(count):
-        value = 0
-        for bit_index in range(8):
-            if pos >= len(pulses):
-                raise SystemExit(f'truncated {label} at byte {byte_index}')
-            pulse = pulses[pos]
-            pos += 1
-            if bit_index == 7:
-                pulse -= BYTE_DELAY
-            if pulse == ZERO:
-                bit = 0
-            elif pulse == ONE:
-                bit = 1
-            else:
-                raise SystemExit(f'{label}: bad pulse {pulse} at byte {byte_index}, bit {bit_index}')
-            value = (value << 1) | bit
-        out.append(value)
-    return bytes(out), pos
-
-
-def turbo_checksum(payload):
+def checksum(payload):
     value = 1
     for byte in payload:
         value = (byte + value) & 0xFF
@@ -49,148 +26,132 @@ def turbo_checksum(payload):
     return value
 
 
-def header_fields(header):
+def fields(header):
+    if len(header) != HEADER_LEN:
+        raise SystemExit(f'fast header length is {len(header)}, expected {HEADER_LEN}')
     return {
         'length': u16(header, 0),
         'load': u16(header, 2),
         'dest': u16(header, 4),
         'compression': header[6],
-        'checksum': header[7],
+        'sum': header[7],
         'usr': u16(header, 8),
         'clear': u16(header, 10),
     }
 
 
-def expect_leader(pulses, pos, number):
-    end = pos + FAST_LEADER
-    if end > len(pulses) or any(p != FAST_LEADER_PULSE for p in pulses[pos:end]):
-        raise SystemExit(f'fast leader {number} is not {FAST_LEADER} x {FAST_LEADER_PULSE}')
-    pos = end
-    if pulses[pos:pos+2] != [250, 499]:
-        raise SystemExit(f'fast leader {number}: sync pulses are {pulses[pos:pos+2]}, expected [250, 499]')
-    return pos + 2
+def parse(path):
+    d = Path(path).read_bytes()
+    if len(d) > MAX_SIZE:
+        raise SystemExit(f'{path}: TZX is {len(d)} bytes, limit is {MAX_SIZE}')
+    if len(d) < 10 or d[:8] != b'ZXTape!\x1a':
+        raise SystemExit(f'{path}: bad TZX header')
+
+    o = 10
+    blocks = []
+    while o < len(d):
+        bid = d[o]
+        o += 1
+        if bid == 0x30:
+            n = d[o]
+            blocks.append((bid, {'text': bytes(d[o+1:o+1+n])}))
+            o += 1 + n
+        elif bid == 0x11:
+            pilot, sync1, sync2, zero, one, count = (u16(d, o + 2*i) for i in range(6))
+            used, pause, n = d[o+12], u16(d, o+13), u24(d, o+15)
+            data = bytes(d[o+18:o+18+n])
+            blocks.append((bid, {
+                'pilot': pilot, 'sync1': sync1, 'sync2': sync2,
+                'zero': zero, 'one': one, 'count': count,
+                'used': used, 'pause': pause, 'data': data,
+            }))
+            o += 18 + n
+        elif bid == 0x12:
+            blocks.append((bid, {'pulse': u16(d, o), 'count': u16(d, o+2)}))
+            o += 4
+        elif bid == 0x14:
+            zero, one = u16(d, o), u16(d, o+2)
+            used, pause, n = d[o+4], u16(d, o+5), u24(d, o+7)
+            data = bytes(d[o+10:o+10+n])
+            blocks.append((bid, {
+                'zero': zero, 'one': one, 'used': used,
+                'pause': pause, 'data': data,
+            }))
+            o += 10 + n
+        elif bid == 0x20:
+            raise SystemExit(f'{path}: explicit pause block present')
+        elif bid == 0x19:
+            raise SystemExit(f'{path}: generalized-data block remains')
+        elif bid == 0x13:
+            raise SystemExit(f'{path}: expanded pulse-sequence block remains')
+        else:
+            raise SystemExit(f'{path}: unexpected TZX block 0x{bid:02X}')
+        if o > len(d):
+            raise SystemExit(f'{path}: truncated TZX block 0x{bid:02X}')
+
+    if o != len(d):
+        raise SystemExit(f'{path}: trailing bytes')
+    return d, blocks
 
 
-def validate_fast_stream(pulses, bin_path=None):
-    pos = 0
-    payloads = []
-    headers = []
-    for number in (1, 2):
-        pos = expect_leader(pulses, pos, number)
-        raw_header, pos = decode_bytes(pulses, pos, HEADER_LEN, f'header {number}')
-        fields = header_fields(raw_header)
-        headers.append(fields)
-        if pos >= len(pulses) or pulses[pos] != 501:
-            got = pulses[pos] if pos < len(pulses) else None
-            raise SystemExit(f'header {number}: minisync is {got}, expected 501')
-        pos += 1
-        payload, pos = decode_bytes(pulses, pos, fields['length'], f'payload {number}')
-        if turbo_checksum(payload) != fields['checksum']:
-            raise SystemExit(f'payload {number}: turbo checksum mismatch')
-        payloads.append(payload)
+def validate(path, bin_path=None):
+    d, blocks = parse(path)
+    ids = [bid for bid, _ in blocks]
+    if ids != EXPECTED_IDS:
+        raise SystemExit(f'{path}: TZX block sequence {ids} != {EXPECTED_IDS}')
 
-    if pos != len(pulses):
-        raise SystemExit(f'extra turbo pulses remain after game payload: {len(pulses) - pos}')
+    rom = [blocks[1][1], blocks[2][1]]
+    if [x['count'] for x in rom] != ROM_PILOTS:
+        raise SystemExit(f'{path}: ROM pilot counts {[x["count"] for x in rom]} != {ROM_PILOTS}')
+    if any(x['pause'] for x in rom):
+        raise SystemExit(f'{path}: ROM block pause is not zero')
 
-    screen, game = headers
+    fast_headers = [blocks[3][1], blocks[6][1]]
+    tones = [blocks[4][1], blocks[7][1]]
+    payloads = [blocks[5][1], blocks[8][1]]
+
+    for number, block in enumerate(fast_headers, 1):
+        got = (block['pilot'], block['sync1'], block['sync2'], block['zero'],
+               block['one'], block['count'], block['used'], block['pause'])
+        want = (FAST_PULSE, 250, 499, ZERO, ONE, FAST_LEADER, 8, 0)
+        if got != want:
+            raise SystemExit(f'fast header block {number} timing {got} != {want}')
+        if len(block['data']) != HEADER_LEN:
+            raise SystemExit(f'fast header block {number} has {len(block["data"])} bytes')
+
+    for number, tone in enumerate(tones, 1):
+        if (tone['pulse'], tone['count']) != (501, 1):
+            raise SystemExit(f'minisync {number} is {tone}')
+
+    for number, block in enumerate(payloads, 1):
+        got = (block['zero'], block['one'], block['used'], block['pause'])
+        if got != (ZERO, ONE, 8, 0):
+            raise SystemExit(f'fast payload block {number} timing {got}')
+        h = fields(fast_headers[number-1]['data'])
+        if len(block['data']) != h['length']:
+            raise SystemExit(f'fast payload block {number} length mismatch')
+        if checksum(block['data']) != h['sum']:
+            raise SystemExit(f'fast payload block {number} checksum mismatch')
+
+    screen = fields(fast_headers[0]['data'])
+    game = fields(fast_headers[1]['data'])
     if (screen['length'], screen['load'], screen['dest'], screen['compression'], screen['usr']) != (SCREEN_LEN, 16384, 0, 0, 0x0100):
-        raise SystemExit(f'loading-screen turbo header is wrong: {screen}')
+        raise SystemExit(f'loading-screen fast header is wrong: {screen}')
     if (game['load'], game['dest'], game['compression'], game['usr'], game['clear']) != (32768, 0, 0, 32768, 32767):
-        raise SystemExit(f'game turbo header does not jump cleanly to 32768: {game}')
+        raise SystemExit(f'game fast header does not jump to 32768: {game}')
 
     if bin_path:
         expected = Path(bin_path).read_bytes()
         if game['length'] != len(expected):
-            raise SystemExit(f'game turbo length {game["length"]} != binary length {len(expected)}')
-        if payloads[1] != expected:
-            raise SystemExit('game turbo payload differs from freshly assembled binary')
-    return headers
+            raise SystemExit(f'game fast length {game["length"]} != binary length {len(expected)}')
+        if payloads[1]['data'] != expected:
+            raise SystemExit('game fast payload differs from freshly assembled binary')
 
-
-def validate(path, bin_path=None):
-    d = Path(path).read_bytes()
-    if len(d) > MAX_SIZE:
-        raise SystemExit(f"{path}: TZX is {len(d)} bytes, limit is {MAX_SIZE}")
-    if d[:8] != b'ZXTape!\x1a' or len(d) < 10:
-        raise SystemExit(f"{path}: bad TZX header")
-
-    o = 10
-    ids = []
-    rom = []
-    explicit = []
-    pauses = []
-    pulses = []
-    while o < len(d):
-        bid = d[o]
-        o += 1
-        ids.append(bid)
-        if bid == 0x10:
-            pause, n = u16(d, o), u16(d, o + 2)
-            pauses.append(pause)
-            o += 4 + n
-        elif bid == 0x11:
-            pilot, sync1, sync2, zero, one, count = (u16(d, o + 2*i) for i in range(6))
-            used, pause, n = d[o+12], u16(d, o+13), u24(d, o+15)
-            rom.append((pilot, sync1, sync2, zero, one, count, used, pause, n))
-            pauses.append(pause)
-            o += 18 + n
-        elif bid == 0x12:
-            pulse, count = u16(d, o), u16(d, o + 2)
-            pulses.extend([pulse] * count)
-            o += 4
-        elif bid == 0x13:
-            count = d[o]
-            pulses.extend(u16(d, o + 1 + 2*k) for k in range(count))
-            o += 1 + 2 * count
-        elif bid == 0x14:
-            pause, n = u16(d, o+5), u24(d, o+7)
-            pauses.append(pause)
-            o += 10 + n
-        elif bid == 0x15:
-            pause, n = u16(d, o+2), u24(d, o+5)
-            pauses.append(pause)
-            o += 8 + n
-        elif bid == 0x19:
-            raise SystemExit(f"{path}: generalized-data block remains in release TZX")
-        elif bid == 0x20:
-            explicit.append(u16(d, o))
-            o += 2
-        elif bid in (0x21, 0x30):
-            n = d[o]
-            o += 1 + n
-        elif bid == 0x22:
-            pass
-        elif bid == 0x32:
-            n = u16(d, o)
-            o += 2 + n
-        elif bid == 0x5A:
-            o += 9
-        else:
-            raise SystemExit(f"{path}: unhandled TZX block 0x{bid:02x}")
-        if o > len(d):
-            raise SystemExit(f"{path}: truncated TZX block 0x{bid:02x}")
-
-    if len(rom) != 2 or [x[5] for x in rom] != ROM_PILOTS:
-        raise SystemExit(f"{path}: ROM pilot counts {[x[5] for x in rom]} != {ROM_PILOTS}")
-    if explicit:
-        raise SystemExit(f"{path}: explicit pause block(s) present: {explicit}")
-    if any(pauses):
-        raise SystemExit(f"{path}: nonzero per-block pause(s): {pauses}")
-    if 0x13 not in ids:
-        raise SystemExit(f"{path}: pulse-sequence turbo stream missing")
-
-    timing = collections.Counter(pulses)
-    for pulse in (ZERO, ONE, ZERO + BYTE_DELAY, ONE + BYTE_DELAY):
-        if not timing[pulse]:
-            raise SystemExit(f"{path}: required turbo timing {pulse} T-states not found")
-    if timing[1140] or timing[2280]:
-        raise SystemExit(f"{path}: legacy slower pulses remain")
-
-    headers = validate_fast_stream(pulses, bin_path)
-    print(f"TZX OK: {len(d)} bytes, pilots {ROM_PILOTS[0]}/{ROM_PILOTS[1]}, "
-          f"fast leaders 2x{FAST_LEADER}x{FAST_LEADER_PULSE}, turbo {ZERO}/{ONE}, "
-          f"no pauses, final jump {headers[1]['usr']}")
-    print("TZX blocks:", dict(sorted(collections.Counter(ids).items())))
+    counts = dict(sorted(collections.Counter(ids).items()))
+    print(f'TZX OK: {len(d)} bytes, pilots {ROM_PILOTS[0]}/{ROM_PILOTS[1]}, '
+          f'fast leaders 2x{FAST_LEADER} at {FAST_PULSE}, turbo {ZERO}/{ONE}, '
+          f'no pauses, jump {game["usr"]}')
+    print('TZX blocks:', counts)
 
 
 def main():

@@ -54,13 +54,13 @@ The final TZX is independently parsed and must contain:
 - ROM pilot 1: **2824 pulses**;
 - ROM pilot 2: **2420 pulses**;
 - fast leader: **256 pulses at 1710 T-states each**;
-- fast stream stored directly as TZX pulse-sequence blocks (ID `0x13`);
+- fast headers stored as standard TZX turbo-data blocks (`0x11`), with payloads in pure-data blocks (`0x14`);
 - turbo zero pulse: **855 T-states**;
 - turbo one pulse: **1710 T-states**;
 - no explicit pause blocks;
 - **0 ms** pause on every data block.
 
-ZQLoader adds its normal 64-T-state end-of-byte delay to the final data pulse of each byte. `loader/tzx19to13.py` expands the generated generalized-data stream into deterministic pulse-sequence blocks and normalizes each fast leader before chunking, so a 256-pulse leader may span multiple `0x13` blocks without being shortened incorrectly. The turbo edition follows the same visible sequence as the standard tape: BASIC first, then the shared SCREEN$, then game bytes, then entry at 32768. Its payloads use the loader's direct-copy path so zero-gap transitions do not depend on decompression time.
+The release TZX uses two equal pulses per bit, so each encoded zero pulse is 855 T-states and each encoded one pulse is 1710 T-states. The loader consumes both pulses before advancing to the next bit, which leaves enough processing room without a per-byte delay. `loader/tzx19to13.py` converts the host tool's generalized blocks into compact standard turbo (`0x11`), one-pulse tone (`0x12`), and pure-data (`0x14`) blocks. Its retained legacy path still shortens a leader across a whole contiguous `0x13` stream rather than only its first chunk. The turbo edition follows the same visible sequence as the standard tape: BASIC first, then the shared SCREEN$, then game bytes, then entry at 32768. Its payloads use the loader's direct-copy path so zero-gap transitions do not depend on decompression time.
 
 ## Audio
 
