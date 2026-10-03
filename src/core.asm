@@ -368,7 +368,7 @@ row_de:
         ret
 
 draw_board:
-        ld hl,BGBUF             ; pixels then attributes ($E000-$FAFF)
+        ld hl,BGBUF             ; pixels then attributes from the clean board buffer
         ld de,0x4000
         ld bc,6912
         ldir
@@ -457,7 +457,7 @@ star_prepare:
         ; the old picture used light paper here.  The moving stars XOR
         ; pixels in columns 28..30, so make their whole lane black-backed.
         ; Column 31 is the ribbon lane and is black except for its four blocks.
-        ld hl,0xF800+3*32+28
+        ld hl,BGBUF+6144+3*32+28
         ld b,18
 .attr_row:
         ld a,0x47
@@ -491,7 +491,7 @@ star_prepare:
         pop bc
         inc c
         djnz .ribbon_px
-        ld hl,0xF800+10*32+31
+        ld hl,BGBUF+6144+10*32+31
         ld de,32
         ld (hl),0x42
         add hl,de
@@ -1051,7 +1051,7 @@ TITLE5:
         db 's',0,0,14,16,12,2,28,0
         db 'r',0,0,22,24,16,16,16,0
         db 'o',0,0,12,18,18,18,12,0
-        db 'm',0,0,26,30,22,18,18,0
+        db 'm',0,0,17,27,21,17,17,0
 TITLE5_BLANK:
         db 0,0,0,0,0,0,0,0
 

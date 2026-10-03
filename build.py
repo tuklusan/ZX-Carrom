@@ -62,10 +62,10 @@ def main():
     binfile = BUILD / 'carrom.bin'
     sym = BUILD / 'carrom.sym'
     run(pasmo, '--bin', '--pass3', flat, binfile, sym)
-    if binfile.stat().st_size >= 0x6000:
-        raise SystemExit(f'code too large: {binfile.stat().st_size} bytes')
-    if len(binfile.read_bytes()) != 24569:
-        raise SystemExit('game binary size is not 24569 bytes')
+    game_size = binfile.stat().st_size
+    if game_size <= 0:
+        raise SystemExit('game binary is empty')
+    print(f'game payload: {game_size} bytes')
 
     loading_screen = BUILD / 'loading.scr'
     run(sys.executable, TOOLS / 'build_loading_screen.py', loading_screen)
@@ -78,7 +78,8 @@ def main():
 
     fast_loader = BUILD / 'turbo_loader.bin'
     fast_loader_sym = BUILD / 'turbo_loader.sym'
-    run(pasmo, '--bin', '--pass3', LOADER / 'turbo_loader.asm', fast_loader, fast_loader_sym)
+    run(pasmo, '--bin', '--pass3', '--equ', f'GAME_SIZE={game_size}',
+        LOADER / 'turbo_loader.asm', fast_loader, fast_loader_sym)
     run(sys.executable, TOOLS / 'build_fast_tzx.py',
         '--bootstrap', fast_bootstrap,
         '--loader', fast_loader,

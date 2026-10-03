@@ -125,8 +125,10 @@ def main():
 
     if len(screen) != 6912:
         raise SystemExit(f'loading screen is {len(screen)} bytes, expected 6912')
-    if len(game) != 24569:
-        raise SystemExit(f'game is {len(game)} bytes, expected 24569')
+    if not game:
+        raise SystemExit('game payload is empty')
+    if len(game) > 0xFFFF:
+        raise SystemExit(f'game payload is too large for IX: {len(game)} bytes')
 
     program = basic_program(bootstrap, loader)
     blocks = [
@@ -137,7 +139,7 @@ def main():
     ]
     image = b'ZXTape!\x1a' + bytes([1, 20]) + b''.join(blocks)
     Path(a.out).write_bytes(image)
-    print(f'{a.out}: {len(image)} bytes, four blocks, bootstrap {len(bootstrap)} bytes, decoder {len(loader)} bytes')
+    print(f'{a.out}: {len(image)} bytes, four blocks, bootstrap {len(bootstrap)} bytes, decoder {len(loader)} bytes, game {len(game)} bytes')
 
 
 if __name__ == '__main__':

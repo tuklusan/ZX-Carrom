@@ -2,6 +2,7 @@
 ; Loaded inside a BASIC REM line at a fixed address.
 ; Sequence: loading screen, game, then enter 32768 with a BASIC return route.
 ; Each fast data bit is one edge interval: zero 855 T, one 1710 T.
+; GAME_SIZE is supplied by build.py from the freshly assembled game payload.
 
         ORG 0xFB00
 
@@ -18,7 +19,7 @@ loader_start:
         jr c,load_error
 
         ld hl,0x8000
-        ld ix,24569
+        ld ix,GAME_SIZE
         call load_block
         jr c,load_error
 

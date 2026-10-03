@@ -15,10 +15,10 @@
 
 ; memory map (one CODE block at 32768; BASIC does CLEAR 32767)
 ;   $8000-       program, tables, font, music, RLE-packed board screen, variables
-;   $E000-$F7FF  the board pixels, unpacked at start (display source and erase buffer)
-;   $F800-$FAFF  the board attributes
+;   $E100-$F8FF  the board pixels, unpacked at start (display source and erase buffer)
+;   $F900-$FBFF  the board attributes
 ;   $FDFD/$FE00  IM2 jump and vector table; stack below $FDF0
-BGBUF   EQU 0xE000              ; clean copy of the board pixels
+BGBUF   EQU 0xE100              ; clean copy of the board pixels
 BGOFF   EQU BGBUF-0x4000
 IM2TAB  EQU 0xFE00
 IM2JP   EQU 0xFDFD
@@ -376,20 +376,20 @@ S_BLU:      db "BLU",0
 S_BOARD:    db "BOARD ",0
 S_GAME:     db " GAME ",0
 S_DASH:     db " - ",0
-S_BREAKS:   db " BREAK",0
-S_THINK:    db " THINKS",0
+S_BREAKS:   db " BREAKS",0
+S_THINK:    db " THINKING",0
 S_PLACED:   db " AT ",0
-S_STRIKE:   db " SHOOTS",0
-S_BRKFOUL:  db "FOUL - NEXT",0
-S_BRKLOST:  db "3 MISSES - NEXT",0
-S_BRKAGAIN: db "BREAK - AGAIN",0
-S_FOUL:     db "STRIKER FOUL",0
-S_QCOVER:   db "QUEEN: ",0
-S_QPEND:    db "COVER QUEEN!",0
-S_QRET:     db "QUEEN RETURNED",0
-S_POCKETED: db "IN: ",0
-S_OPPCOIN:  db "OPP COIN IN",0
-S_NOPOCKET: db "NO POCKET",0
+S_STRIKE:   db " STRIKING",0
+S_BRKFOUL:  db "BREAK FOUL - TURN PASSES",0
+S_BRKLOST:  db "3 MISSED BREAKS - TURN PASSES",0
+S_BRKAGAIN: db "BREAK MISSED - TRY AGAIN",0
+S_FOUL:     db "FOUL! STRIKER POCKETED",0
+S_QCOVER:   db "QUEEN COVERED BY ",0
+S_QPEND:    db "QUEEN IN - COVER HER!",0
+S_QRET:     db "QUEEN BACK TO CENTRE",0
+S_POCKETED: db "POCKETED ",0
+S_OPPCOIN:  db "OPPONENT'S COIN IN",0
+S_NOPOCKET: db "NOTHING POCKETED",0
 S_CONT:     db " - AGAIN",0
 S_PASS:     db " - NEXT",0
 S_COLON:    db ": ",0
@@ -398,23 +398,23 @@ S_PTS:      db " PTS",0
 S_GAMEOVER: db "GAME ",0
 S_TO:       db " TO ",0
 S_MATCH:    db "MATCH TO ",0
-S_STARS:    db " - NEW",0
-S_PAUSED:   db "PAUSED - SPACE",0
-S_PRESS:    db "PRESS KEY",0
+S_STARS:    db " - NEW MATCH",0
+S_PAUSED:   db "** PAUSED - PRESS SPACE **",0
+S_PRESS:    db "PRESS ANY KEY",0
 S_LOADBLANK: db "                ",0
 S_TITLE:    db "SANYALnet Labs  Carrom Arena",0
-S_SND0:     db "SOUND: BOTH",0
-S_SND1:     db "SOUND: FX",0
+S_SND0:     db "SOUND: MUSIC AND EFFECTS",0
+S_SND1:     db "SOUND: EFFECTS ONLY",0
 S_SND2:     db "SOUND OFF",0
 S_DUE:      db " DUE",0
 S_NODUE:    db "    ",0
 S_HPTS:     db "PTS ",0
 S_HGAMES:   db "GAMES  ",0
 S_HBOARDS:  db "BOARDS ",0
-S_AGG:      db "ATTACK",0
-S_BAL:      db "BALANCE",0
-S_DEF:      db "DEFENCE",0
-S_TRK:      db "TRICK",0
+S_AGG:      db "AGGRESSIVE",0
+S_BAL:      db "BALANCED",0
+S_DEF:      db "DEFENSIVE",0
+S_TRK:      db "TRICKSTER",0
 PROFNAMES:  dw S_AGG,S_BAL,S_DEF,S_TRK
 
         INCLUDE "tables.asm"

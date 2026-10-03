@@ -14,7 +14,7 @@ python3 build.py
 
 The game is assembled with **Pasmo** from `https://github.com/tuklusan/pasmo`. Generated font, board-table, and music assets are checked in. `python3 build.py --regen-assets` regenerates them and additionally needs SkoolKit from `https://github.com/tuklusan/skoolkit`.
 
-Every normal build assembles the 24,569-byte game and generates the 6,912-byte loading screen from scratch. Exact size and tape-content checks catch accidental payload changes without keeping duplicate binary copies in the source tree.
+Every normal build assembles the game and generates the 6,912-byte loading screen from scratch. The build passes the freshly assembled game byte count directly into the decoder, and validation confirms that decoder length and the final turbo payload agree.
 
 The clean Ubuntu workflow builds Pasmo from the project fork, performs two clean production builds, compares game/TZX/release ZIP byte-for-byte, validates the TZX, records release checksums, and checks the exact TZX in Fuse before the longer play checks.
 
@@ -74,7 +74,7 @@ Audio code is based on `https://github.com/tuklusan/ZX-Spectrum-1-Bit-Routines`.
 
 ## Controls and play
 
-The shared loading picture uses the 4x8 project font for its key legend. On machine-code entry, the load notice is replaced in place by a flashing small-font prompt. The play screen title is also rendered with the 4x8 font. During play, three independently paced star layers stream outward beside the board, with slower clustered galaxy shapes behind the faster streaks. The east field is confined to its own outer strip, with a safety gap beside the east robot, and the red/yellow/green/cyan ribbon sits at the far-right edge.
+The shared loading picture uses the 4x8 project font for its key legend. On machine-code entry, the load notice is replaced in place by a flashing small-font prompt. The play screen title uses its own fixed five-pixel-advance raster face. During play, three independently paced star layers stream outward beside the board, with slower clustered galaxy shapes behind the faster streaks. The east field is confined to its own outer strip, with a safety gap beside the east robot, and the red/yellow/green/cyan ribbon sits at the far-right edge.
 
 Four robot players operate autonomously; RED is North/South and BLUE is East/West.
 
@@ -88,7 +88,7 @@ The HUD counters are session totals for each pair. PTS rises when that pair pock
 
 ## Memory map
 
-The main program starts at `$8000`. Board pixels use `$E000-$F7FF`, board attributes `$F800-$FAFF`, the IM2 jump/vector area is `$FDFD/$FE00`, and the game stack is below `$FDF0`. The TZX auto-runs the resident bootstrap at 23784, copies the timing-critical decoder to `$FB00`, and puts its post-game BASIC return trampoline at `$7F00`. The decoder is no longer needed once the game has started.
+The main program starts at `$8000`. Board pixels use `$E100-$F8FF`, board attributes `$F900-$FBFF`, the IM2 jump/vector area is `$FDFD/$FE00`, and the game stack is below `$FDF0`. The TZX auto-runs the resident bootstrap at 23784, copies the timing-critical decoder to `$FB00`, and puts its post-game BASIC return trampoline at `$7F00`. The decoder is no longer needed once the game has started.
 
 ## Project layout
 

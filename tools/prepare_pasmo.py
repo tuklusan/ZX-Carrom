@@ -44,6 +44,14 @@ def strip_sjasm(lines):
         if s.startswith('SAVEBIN ') or s.startswith('DISPLAY '):
             continue
         if s.startswith('ASSERT '):
+            expr = line.strip()[len('ASSERT '):]
+            indent = line[:len(line) - len(line.lstrip())]
+            out.extend((
+                f'{indent}IF {expr}',
+                f'{indent}ELSE',
+                f'{indent}    .ERROR assertion failed: {expr}',
+                f'{indent}ENDIF',
+            ))
             continue
         out.append(line)
     return out

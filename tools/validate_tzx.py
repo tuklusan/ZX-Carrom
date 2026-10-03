@@ -130,6 +130,17 @@ def check_rom(block, pilot_count):
         raise SystemExit(f'ROM block timing {got} != {want}')
 
 
+def check_loader_lengths(loader, game_size):
+    ix_values = [
+        u16(loader, pos + 2)
+        for pos in range(len(loader) - 3)
+        if loader[pos:pos + 2] == b'\xDD\x21'
+    ]
+    want = [6912, game_size]
+    if ix_values != want:
+        raise SystemExit(f'loader IX lengths {ix_values} != {want}')
+
+
 def check_fast(block, expected, label):
     if block['pause'] != 0:
         raise SystemExit(f'{label}: pause is not zero')
@@ -221,6 +232,7 @@ def main():
     if loader_off + len(resident) >= len(program):
         raise SystemExit('resident loader placement is invalid')
 
+    check_loader_lengths(loader, len(game))
     check_fast(parsed[2], screen, 'screen block')
     check_fast(parsed[3], game, 'game block')
 
@@ -228,7 +240,7 @@ def main():
         f'TZX OK: {len(data)} bytes, blocks 11/11/19/19, '
         f'ROM pilots {ROM_PILOTS[0]}/{ROM_PILOTS[1]}, '
         f'fast leaders {FAST_PULSES}/{FAST_PULSES}, '
-        f'data {ZERO}/{ONE}, no pauses'
+        f'data {ZERO}/{ONE}, game {len(game)} bytes, no pauses'
     )
 
 
