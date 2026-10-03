@@ -95,15 +95,15 @@ def make_screen():
                 pset(x,y)
 
     attrs=[
-        (0,4,0x4F),
-        (4,17,0x47),
+        (0,3,0x4F),
+        (3,17,0x47),
         (17,24,0x46),
     ]
     for y0,y1,a in attrs:
         for row in range(y0,y1):
             for col in range(32):
                 s[6144+row*32+col]=a
-    for row in range(6,16):
+    for row in range(6,17):
         for col in range(9,23):
             s[6144+row*32+col]=0x45
     for i,ink in enumerate((2,6,4,5)):

@@ -106,9 +106,14 @@ start:
         call unrle
         call star_prepare
         ; keep the loaded picture up; replace its load notice with the small prompt
+        ld hl,S_LOADBLANK
+        ld b,17
+        ld c,24
+        call print64
         ld hl,S_PRESS
         ld b,17
-        call center64
+        ld c,25
+        call print64
         ld hl,0x5800+17*32+12
         ld b,7
 4:      ld (hl),0xC6            ; flashing bright yellow
@@ -396,6 +401,7 @@ S_MATCH:    db "MATCH TO ",0
 S_STARS:    db " - NEW MATCH",0
 S_PAUSED:   db "** PAUSED - PRESS SPACE **",0
 S_PRESS:    db "PRESS ANY KEY",0
+S_LOADBLANK: db "                ",0
 S_TITLE:    db "SANYALnet Labs  Carrom Arena",0
 S_SND0:     db "SOUND: MUSIC AND EFFECTS",0
 S_SND1:     db "SOUND: EFFECTS ONLY",0

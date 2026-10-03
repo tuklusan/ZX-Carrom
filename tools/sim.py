@@ -75,7 +75,17 @@ def main():
     pause_frozen = True
     pause_resumed = False
     restart_seen = False
+    loading_band_clean = all(mem[0x5800+r*32+x] == (0x4F if r < 3 else 0x47)
+                             for r in range(4) for x in range(32))
+    loading_board_uniform = all(mem[0x5800+r*32+x] == 0x45
+                                for r in range(6,17) for x in range(9,23))
+    def paddr0(xb,y):
+        return 0x4000 | ((y & 0xC0) << 5) | ((y & 7) << 8) | ((y & 0x38) << 2) | xb
+    intro_border_ref = bytes(mem[paddr0(xb,y)]
+                             for y in range(136,144)
+                             for xb in list(range(0,12))+list(range(20,32)))
     intro_prompt = False
+    intro_border_clean = True
     ribbon_intro = False
     ribbon_game = False
     star_prev = [None, None, None]
@@ -86,13 +96,15 @@ def main():
     east_base_clean = True
     east_attr_clean = True
     small_game_title = False
+    title_baseline = False
+    star_sparse = False
     play_msgs = 0
     strikes = 0
     stray_total = 0
     def draw(scr, frame, border, kb):
         nonlocal song_prev, song_wraps, pause_ref, pause_frozen, pause_resumed, restart_seen
-        nonlocal intro_prompt, ribbon_intro, ribbon_game, protected_ref, protected_clean
-        nonlocal east_margin_clean, east_base_clean, east_attr_clean, small_game_title
+        nonlocal intro_prompt, intro_border_clean, ribbon_intro, ribbon_game, protected_ref, protected_clean
+        nonlocal east_margin_clean, east_base_clean, east_attr_clean, small_game_title, title_baseline, star_sparse
         now_s = (regs[T] - t0) / 3500000
         for i in range(8): kb[i] = 0
         if a.nogroove: mem[sym['gm_run']] = 0
@@ -104,6 +116,11 @@ def main():
             aa=[mem[0x5800+17*32+c] for c in range(12,19)]
             if aa and all(v & 0x80 for v in aa):
                 intro_prompt = True
+            live = bytes(mem[paddr(xb,y)]
+                         for y in range(136,144)
+                         for xb in list(range(0,12))+list(range(20,32)))
+            if live != intro_border_ref:
+                intro_border_clean = False
             cols=[mem[0x5800+(10+i)*32+31] & 7 for i in range(4)]
             if cols == [2,6,4,5]:
                 ribbon_intro = True
@@ -128,6 +145,31 @@ def main():
                             outside=True
             if inside and not outside:
                 small_game_title = True
+            title = "SANYALnet Labs  Carrom Arena"
+            aligned = True
+            for i,ch in enumerate(title):
+                if ch == ' ':
+                    continue
+                rows = []
+                for yy in range(8):
+                    for xx in range(5):
+                        px = 58 + i*5 + xx
+                        val = mem[paddr(px//8,yy)]
+                        if val & (128 >> (px & 7)):
+                            rows.append(yy)
+                if not rows or max(rows) != 6:
+                    aligned = False
+                    break
+            if aligned:
+                title_baseline = True
+            dots = 0
+            for yy in range(24,168):
+                for xx in list(range(0,24))+list(range(224,248)):
+                    val = mem[paddr(xx//8,yy)]
+                    if val & (128 >> (xx & 7)):
+                        dots += 1
+            if 8 <= dots <= 36:
+                star_sparse = True
 
         if 2.2 <= now_s < 2.3 and protected_ref is None:
             keep=[]
@@ -269,10 +311,13 @@ def main():
             'effects idle': mem[sym['sfx_busy']] == 0,
             'phase sane': phases_seen and max(phases_seen) <= 11,
             'screen clean': stray_total == 0,
-            'small flashing intro': intro_prompt,
+            'loading band': loading_band_clean,
+            'loading board colour': loading_board_uniform,
+            'small flashing intro': intro_prompt and intro_border_clean,
             'spectrum ribbon': ribbon_intro and ribbon_game,
             'protected HUD/ribbon': protected_clean and east_margin_clean and east_base_clean and east_attr_clean,
-            'small game title': small_game_title,
+            'small game title': small_game_title and title_baseline,
+            'sparse space field': star_sparse,
             'space parallax': star_changes[2] > star_changes[1] > star_changes[0] >= 10,
         }
         for name, ok in checks.items():

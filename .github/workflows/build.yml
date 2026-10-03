@@ -108,8 +108,11 @@ jobs:
             grep -Fq 'Simulation stopped (PC at start address): PC=32768' "/tmp/fast-load-${n}.log"
           done
           cp /tmp/carrom_fast_1.z80 /tmp/carrom_fast.z80
-          /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_std.z80 --secs 96 --prefix /tmp/std --shots 10,30,65,90 --seed 4660 --accept
+          /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_std.z80 --secs 0 --prefix /tmp/loadscreen --quiet
+          /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_std.z80 --secs 96 --prefix /tmp/std --shots 1,10,30,65,90 --seed 4660 --accept
           mkdir -p build/runtime-view
+          cp /tmp/loadscreen_end.png build/runtime-view/loading.png
+          cp /tmp/std_0001.0.png build/runtime-view/intro.png
           cp /tmp/std_0030.0.png build/runtime-view/board.png
           /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_fast.z80 --secs 25 --prefix /tmp/fast --shots 10,25 --seed 4660
           QUITTEST=1 /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_std.z80 --secs 12 --prefix /tmp/quit-std --seed 4660 --quiet --quit-check
@@ -156,5 +159,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zx-carrom-runtime-view
-          path: build/runtime-view/board.png
+          path: build/runtime-view/*.png
           if-no-files-found: error
+
+      - name: Tag accepted beta
+        run: |
+          git fetch --tags --force
+          if git rev-parse -q --verify refs/tags/beta-0.0.2 >/dev/null; then
+            test "$(git rev-list -n1 beta-0.0.2)" = "$(git rev-parse HEAD)"
+          else
+            git tag -a beta-0.0.2 -m "beta-0.0.2"
+            git push origin beta-0.0.2
+          fi

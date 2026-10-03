@@ -529,6 +529,9 @@ star_step:
         ld a,b
         ld (star_frame),a
 
+        ld a,(star_frame)
+        and 1
+        jr nz,.far_test
         ld hl,STAR_NEAR
         ld a,(star_near)
         call stars_draw
@@ -543,7 +546,7 @@ star_step:
         call stars_draw
 
         ld a,(star_frame)
-        and 1
+        and 3
         jr nz,.far_test
         ld hl,STAR_MID
         ld a,(star_mid)
@@ -560,7 +563,7 @@ star_step:
 
 .far_test:
         ld a,(star_frame)
-        and 3
+        and 7
         ret nz
         ld hl,STAR_FAR
         ld a,(star_far)
@@ -622,23 +625,23 @@ stars_draw:
         jr .star
 
 STAR_FAR:
-        db 4,31,11,53,19,77,3,112,7,143,22,159
-        db 132,38,139,68,147,94,134,126,148,150,143,157
-        ; slow spiral-like galaxy clusters
-        db 16,96,14,96,18,96,16,94,17,98,13,97,19,95
-        db 135,118,133,118,137,118,135,116,136,120,132,119,138,117
+        db 4,31,19,77,7,143
+        db 132,38,147,94,148,150
+        ; compact slow galaxy clusters
+        db 16,96,14,96,18,96,17,98
+        db 135,118,133,118,137,118,136,120
         db 255
 STAR_MID:
-        db 6,28,15,44,1,64,9,84,4,105,13,130,21,150
-        db 133,30,141,52,147,73,136,101,146,122,140,144,132,162
-        ; mid-depth galaxy clusters
-        db 0,124,22,124,2,124,0,122,1,126,21,125,3,123
-        db 147,62,145,62,149,62,147,60,148,64,144,63,150,61
+        db 6,28,9,84,13,130
+        db 133,30,136,101,140,144
+        ; compact mid-depth galaxy clusters
+        db 0,124,22,124,1,126,3,123
+        db 147,62,145,62,148,64,150,61
         db 255
 STAR_NEAR:
-        ; paired points become short fast streaks
-        db 5,36,7,36,18,58,20,58,5,88,7,88,10,118,12,118,0,146,2,146
-        db 133,45,135,45,142,82,144,82,148,110,146,110,135,136,137,136,146,158,148,158
+        ; only two short fast streaks on each side
+        db 5,36,7,36,10,118,12,118
+        db 133,45,135,45,146,158,148,158
         db 255
 
 ; erase rectangle from the clean copy: B=tlx C=tly D=bytes wide E=rows
@@ -1030,12 +1033,12 @@ title5_find:
         ret
 
 TITLE5:
-        db 'S',14,16,12,2,28,0,0,0
-        db 'A',12,18,30,18,18,0,0,0
-        db 'N',18,26,22,18,18,0,0,0
-        db 'Y',18,18,12,4,4,0,0,0
-        db 'L',16,16,16,16,30,0,0,0
-        db 'C',14,16,16,16,14,0,0,0
+        db 'S',0,0,14,16,12,2,28,0
+        db 'A',0,0,12,18,30,18,18,0
+        db 'N',0,0,18,26,22,18,18,0
+        db 'Y',0,0,18,18,12,4,4,0
+        db 'L',0,0,16,16,16,16,30,0
+        db 'C',0,0,14,16,16,16,14,0
         db 'n',0,0,28,18,18,18,18,0
         db 'e',0,0,12,18,30,16,14,0
         db 't',8,8,28,8,8,10,4,0
