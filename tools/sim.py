@@ -106,16 +106,8 @@ def main():
     play_msgs = 0
     strikes = 0
     stray_total = 0
-    basic_sp = None
-    quit_target = None
-    quit_return_seen = False
-    if a.quit_check:
-        if mem[0x7F00] != 0x31 or mem[0x7F03] != 0xC9:
-            raise SystemExit('quit return trampoline is not installed')
-        basic_sp = mem[0x7F01] | (mem[0x7F02] << 8)
-        quit_target = mem[basic_sp] | (mem[(basic_sp + 1) & 0xFFFF] << 8)
-        if not (0 < quit_target < 0x4000):
-            raise SystemExit(f'quit return address is implausible: {quit_target}')
+    if a.quit_check and (mem[0x7F00] != 0x31 or mem[0x7F03] != 0xC9):
+        raise SystemExit('quit return trampoline is not installed')
     def draw(scr, frame, border, kb):
         nonlocal song_prev, song_wraps, pause_ref, pause_frozen, pause_resumed, restart_seen
         nonlocal intro_prompt, intro_border_clean, ribbon_intro, ribbon_game, protected_ref, protected_clean
@@ -263,15 +255,10 @@ def main():
         nxt = end
         if shots:
             nxt = min(end, t0 + int(shots[0] * 3500000))
-        elapsed = (regs[T] - t0) / 3500000
-        run_stop = quit_target if a.quit_check and elapsed >= 7.5 else stop
         with contextlib.redirect_stdout(io.StringIO()):
-            tracer.run(pc, run_stop, 0, nxt - regs[T], True, draw, None, None, None, '$', '02X', '04X')
+            tracer.run(pc, stop, 0, nxt - regs[T], True, draw, None, None, None, '$', '02X', '04X')
         pc = regs[24]
         now = (regs[T] - t0) / 3500000
-        if a.quit_check and run_stop == quit_target and pc == quit_target:
-            quit_return_seen = True
-            break
         if shots and regs[T] >= t0 + int(shots[0] * 3500000):
             screenshot(mem, f"{a.prefix}_{shots[0]:06.1f}.png")
             shots.pop(0)
@@ -388,9 +375,11 @@ def main():
         if bad_checks:
             raise SystemExit('runtime checks failed: ' + ', '.join(bad_checks))
     if a.quit_check:
-        expected_sp = (basic_sp + 2) & 0xFFFF
-        ok = quit_return_seen and regs[SP] == expected_sp and mem[sym['gm_run']] == 0
-        print(f"runtime quit BASIC return: {'PASS' if ok else 'FAIL'} pc={pc} sp={regs[SP]}")
+        ppc = mem[23621] | (mem[23622] << 8)
+        subppc = mem[23623]
+        report = mem[23610]
+        ok = mem[sym['gm_run']] == 0 and report == 8 and ppc == 20 and subppc == 1
+        print(f"runtime quit BASIC return: {'PASS' if ok else 'FAIL'} pc={pc} report={report + 1} line={ppc}:{subppc}")
         if not ok:
             raise SystemExit('quit return check failed')
     return msgs
