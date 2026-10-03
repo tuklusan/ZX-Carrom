@@ -1,9 +1,9 @@
 # Project rules
 
-## Deliverables
+## Release files
 
-Every accepted project deliverable must be committed under `dist/` on `main`.
+Keep the final release files under `dist/` on `main`.
 
-For each accepted release, commit the final TZX, release ZIP, and recorded SHA-256 sums. These files must be the exact outputs from a fresh validated production build. Temporary job artifacts are copies only and do not satisfy this rule.
+Each release must include the final TZX, release ZIP, and SHA-256 sums from a fresh validated build. Temporary workflow copies do not count as the release.
 
-The sole tape release is `dist/carrom_fast.tzx`. No normal-speed tape or WAV file is an accepted release artifact.
+The only tape release is `dist/carrom_fast.tzx`. Do not ship a normal-speed tape or WAV file.

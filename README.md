@@ -2,7 +2,7 @@
 
 Carrom Arena is a ZX Spectrum 48K machine-code game in which four autonomous robot players play doubles carrom.
 
-Upstream project: `https://github.com/tuklusan/carrom-arena`. The production build is source-first: it assembles the game and turbo bootstrap with Pasmo, builds the accepted TZX, and rejects structural mismatches.
+Upstream project: `https://github.com/tuklusan/carrom-arena`. The build assembles the game and turbo bootstrap with Pasmo, creates the TZX, and stops if the tape structure is wrong.
 
 ## Build
 
@@ -12,9 +12,9 @@ The normal build entry point is:
 python3 build.py
 ```
 
-Production assembly uses **Pasmo** from `https://github.com/tuklusan/pasmo`. Generated font, board-table, and music assets are checked in. `python3 build.py --regen-assets` regenerates them and additionally needs SkoolKit from `https://github.com/tuklusan/skoolkit`.
+The game is assembled with **Pasmo** from `https://github.com/tuklusan/pasmo`. Generated font, board-table, and music assets are checked in. `python3 build.py --regen-assets` regenerates them and additionally needs SkoolKit from `https://github.com/tuklusan/skoolkit`.
 
-Every normal build freshly assembles the 24,565-byte game and freshly generates the 6,912-byte loading screen. Their SHA-256 values are checked against fixed accepted values before the TZX is built, so accidental payload changes fail immediately without keeping duplicate binary copies in the source tree.
+Every normal build assembles the 24,565-byte game and generates the 6,912-byte loading screen from scratch. Their SHA-256 values are checked against the expected values before the TZX is built, so accidental payload changes fail immediately without keeping duplicate binary copies in the source tree.
 
 The clean Ubuntu workflow builds Pasmo from the pinned fork, performs two clean production builds, compares game/TZX/release ZIP byte-for-byte, validates the TZX, records SHA-256 hashes, and checks the exact TZX in Fuse before the longer play checks.
 
@@ -30,7 +30,7 @@ The local checks reject restricted vocabulary in the complete staged index and i
 
 ## Delivery rule
 
-Accepted project deliverables are repository content, not temporary job output. Every accepted release must commit its final deliverables under `dist/` on `main`. A release is not complete until the tracked files in `dist/` match a fresh validated build. Workflow artifacts may mirror those files for convenience, but they never replace the committed copies.
+Release files live in `dist/` on `main`, not only in temporary job output. A release is complete only when the tracked files in `dist/` match a fresh validated build. Workflow artifacts are convenience copies, not the release itself.
 
 ## Release files
 
@@ -40,14 +40,14 @@ A successful build creates the sole tape release:
 
 `python3 build.py` creates both `dist/carrom_fast.tzx` and the deterministic source-plus-release `dist/zx-carrom.zip`. The ZIP excludes TAP files. No WAV release artifact is produced.
 
-The fast TZX is deliberately fixed and small. It contains exactly four blocks:
+The fast TZX is small and has exactly four blocks:
 
 1. BASIC header — TZX `0x11`, ROM timing, 2824 pilot pulses;
 2. BASIC program/data — TZX `0x11`, ROM timing, 2420 pilot pulses;
 3. loading screen — compact generalized-data block `0x19`;
 4. game — compact generalized-data block `0x19`.
 
-The BASIC REM line contains a 32-byte bootstrap plus a padded copy of the fast decoder. The bootstrap, assembled from `loader/turbo_bootstrap.asm`, copies the decoder to uncontended RAM at `$FB00`, installs a three-byte return stub at `$7F00`, and jumps to the high copy. The decoder, assembled from `loader/turbo_loader.asm`, has fixed control flow: load and verify the screen, load and verify the game, install the safe return address, then jump to 32768. It has no next-block state after the game.
+The BASIC REM line contains a 32-byte bootstrap plus a padded copy of the fast decoder. The bootstrap, assembled from `loader/turbo_bootstrap.asm`, copies the decoder to uncontended RAM at `$FB00`, installs a three-byte return stub at `$7F00`, and jumps to the high copy. The decoder, assembled from `loader/turbo_loader.asm`, loads and checks the screen, loads and checks the game, installs the safe return address, then jumps to 32768. There is no next-block step after the game.
 
 Fast-block requirements are:
 
@@ -65,7 +65,7 @@ Each fast payload carries two rolling checksum bytes. During payload transfer th
 
 ## Audio
 
-The audio authority is `https://github.com/tuklusan/ZX-Spectrum-1-Bit-Routines`. The bundled upstream reference snapshot and BSD-style licence are under `vendor/ZX-Spectrum-1-Bit-Routines/`; `nanobeep/main.asm` is retained as the reference used for the adaptation.
+Audio code is based on `https://github.com/tuklusan/ZX-Spectrum-1-Bit-Routines`. A copy of the upstream `nanobeep/main.asm` used as a reference, plus its BSD-style licence, is under `vendor/ZX-Spectrum-1-Bit-Routines/`.
 
 - Title/result music uses a callable nanobeep-family player derived from the utz/irrlicht-project routines.
 - Live game music uses an interrupt-safe 50 Hz phase-accumulator design so play continues while music runs.
@@ -93,9 +93,9 @@ The main program starts at `$8000`. Board pixels use `$E000-$F7FF`, board attrib
 - `src/` — game, physics, robots, rendering, generated assets, and audio source.
 - `loader/turbo_bootstrap.asm` — resident BASIC bootstrap that relocates the decoder.
 - `loader/turbo_loader.asm` — production fixed-sequence decoder, executed from uncontended high RAM.
-- `loader/ZQLOADER_LICENSE.txt` — retained loader attribution and licence notice.
-- `tools/` — current screen/TZX builders, validators, simulator, Pasmo preparation, and deterministic packager.
-- `vendor/ZX-Spectrum-1-Bit-Routines/` — upstream audio reference snapshot and licence.
+- `loader/ZQLOADER_LICENSE.txt` — loader credit and licence.
+- `tools/` — screen/TZX builders, validators, simulator, Pasmo preparation, and ZIP packager.
+- `vendor/ZX-Spectrum-1-Bit-Routines/` — upstream audio source copy and licence.
 - `build/` — disposable build products, never shipped.
 - `dist/` — accepted TZX, release ZIP, and hashes.
 
@@ -111,4 +111,4 @@ The run-time harness exercises all four robot seats, turn progression, repeated 
 
 Carrom Arena © 2026 Supratim Sanyal of SANYALnet Labs, under the SANYALnet Labs Non-Commercial License used by the original project.
 
-The 1-bit audio work derives techniques/code from the utz/irrlicht-project `ZX-Spectrum-1-Bit-Routines` collection; see the bundled upstream licence and reference snapshot. ZQLoader attribution and its MIT licence are retained in `loader/ZQLOADER_LICENSE.txt`; production uses the fixed loader sources in `loader/`.
+The 1-bit audio work uses techniques and code from the utz/irrlicht-project `ZX-Spectrum-1-Bit-Routines` collection; see the bundled upstream licence and source copy. ZQLoader credit and its MIT licence are in `loader/ZQLOADER_LICENSE.txt`; the release uses the loader sources in `loader/`.
