@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """Build Carrom Arena ZX with Pasmo and emit the validated TZX release."""
 from pathlib import Path
-import argparse, os, shutil, subprocess, sys
+import argparse, hashlib, os, shutil, subprocess, sys
 
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / 'src'
 BUILD = ROOT / 'build'
 DIST = ROOT / 'dist'
 LOADER = ROOT / 'loader'
-FROZEN = LOADER / 'frozen'
 TOOLS = ROOT / 'tools'
+
+EXPECTED_GAME_SHA = '64dd0b52bb48a95d57ff39106254368fa9c5776e4216f7f437825852e706dbfa'
+EXPECTED_SCREEN_SHA = 'dc5220f576a90fad6d17723caa92f483f282f97432f8a612f3f62e2c39e13fc5'
 
 
 def run(*args, cwd=ROOT):
@@ -26,11 +28,9 @@ def need(env, exe, hint):
 
 def regen_assets():
     try:
-        import PIL  # noqa: F401
-        import numpy  # noqa: F401
         import skoolkit  # noqa: F401
     except ImportError as e:
-        raise SystemExit('asset regeneration needs Pillow, numpy and SkoolKit: '+str(e))
+        raise SystemExit('asset regeneration needs SkoolKit: ' + str(e))
     run(sys.executable, 'gen.py', cwd=SRC)
     run(sys.executable, 'font64.py', cwd=SRC)
     run(sys.executable, 'music.py', cwd=SRC)
@@ -66,17 +66,15 @@ def main():
     run(pasmo, '--bin', '--pass3', flat, binfile, sym)
     if binfile.stat().st_size >= 0x6000:
         raise SystemExit(f'code too large: {binfile.stat().st_size} bytes')
-    if binfile.read_bytes() != (FROZEN / 'game.bin').read_bytes():
-        raise SystemExit('game binary differs from locked tape input')
+    game_sha = hashlib.sha256(binfile.read_bytes()).hexdigest()
+    if game_sha != EXPECTED_GAME_SHA:
+        raise SystemExit(f'game binary hash {game_sha} != expected {EXPECTED_GAME_SHA}')
 
-    # Regenerate the loading picture through the internal tape helper, but keep
-    # its tape output under build/ only. It is not a release artifact.
-    standard_build = BUILD / 'standard'
-    standard_build.mkdir()
-    internal_tape = standard_build / 'carrom_internal.tap'
-    run(sys.executable, TOOLS / 'mktap.py', binfile, internal_tape, standard_build)
-    if (standard_build / 'loading.scr').read_bytes() != (FROZEN / 'loading.scr').read_bytes():
-        raise SystemExit('loading screen differs from locked tape input')
+    loading_screen = BUILD / 'loading.scr'
+    run(sys.executable, TOOLS / 'build_loading_screen.py', loading_screen)
+    screen_sha = hashlib.sha256(loading_screen.read_bytes()).hexdigest()
+    if screen_sha != EXPECTED_SCREEN_SHA:
+        raise SystemExit(f'loading screen hash {screen_sha} != expected {EXPECTED_SCREEN_SHA}')
 
     fast_bootstrap = BUILD / 'turbo_bootstrap.bin'
     fast_bootstrap_sym = BUILD / 'turbo_bootstrap.sym'
@@ -88,14 +86,14 @@ def main():
     run(sys.executable, TOOLS / 'build_fast_tzx.py',
         '--bootstrap', fast_bootstrap,
         '--loader', fast_loader,
-        '--screen', FROZEN / 'loading.scr',
-        '--game', FROZEN / 'game.bin',
+        '--screen', loading_screen,
+        '--game', binfile,
         '--out', DIST / 'carrom_fast.tzx')
     run(sys.executable, TOOLS / 'validate_tzx.py', DIST / 'carrom_fast.tzx',
         '--bootstrap', fast_bootstrap,
         '--loader', fast_loader,
-        '--screen', FROZEN / 'loading.scr',
-        '--game', FROZEN / 'game.bin')
+        '--screen', loading_screen,
+        '--game', binfile)
     print('built and validated:', DIST / 'carrom_fast.tzx')
 
 

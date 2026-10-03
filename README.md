@@ -12,14 +12,9 @@ The normal build entry point is:
 python3 build.py
 ```
 
-Production assembly uses **Pasmo** from `https://github.com/tuklusan/pasmo`. Generated font, board-table, and music assets are checked in. `python3 build.py --regen-assets` regenerates them and additionally needs Pillow, NumPy, and SkoolKit from `https://github.com/tuklusan/skoolkit`.
+Production assembly uses **Pasmo** from `https://github.com/tuklusan/pasmo`. Generated font, board-table, and music assets are checked in. `python3 build.py --regen-assets` regenerates them and additionally needs SkoolKit from `https://github.com/tuklusan/skoolkit`.
 
-The game and loading picture are locked while tape work is in progress:
-
-- `loader/frozen/game.bin` — 24,565 bytes;
-- `loader/frozen/loading.scr` — 6,912 bytes.
-
-Every normal build still assembles the game and regenerates the loading picture, then compares both outputs byte-for-byte with those locked files. The fast-tape builder consumes the locked copies. An accidental game or loading-screen change therefore fails the build rather than silently changing the tape.
+Every normal build freshly assembles the 24,565-byte game and freshly generates the 6,912-byte loading screen. Their SHA-256 values are checked against fixed accepted values before the TZX is built, so accidental payload changes fail immediately without keeping duplicate binary copies in the source tree.
 
 The clean Ubuntu workflow builds Pasmo from the pinned fork, performs two clean production builds, compares game/TZX/release ZIP byte-for-byte, validates the TZX, records SHA-256 hashes, and checks the exact TZX in Fuse before the longer play checks.
 
@@ -64,9 +59,9 @@ Fast-block requirements are:
 - no explicit pause blocks;
 - every block pause: **0 ms**.
 
-Each fast payload carries two rolling checksum bytes. A failed transfer returns from the loader with a red border instead of continuing to consume tape data.
+Each fast payload carries two rolling checksum bytes. During payload transfer the border is driven only black or blue from the rolling checksum parity, once per loaded byte and outside the edge-timing loop. A failed transfer returns from the loader with a red border instead of continuing to consume tape data.
 
-`tools/validate_tzx.py` independently checks the complete four-block structure, ROM pilots, fast leaders, pulse timings, zero pauses, resident-loader bytes, frozen screen bytes, frozen game bytes, both checksums, and the absence of anything after the game block.
+`tools/validate_tzx.py` independently checks the complete four-block structure, ROM pilots, fast leaders, pulse timings, zero pauses, resident-loader bytes, freshly generated screen bytes, freshly assembled game bytes, both checksums, and the absence of anything after the game block.
 
 ## Audio
 
@@ -98,13 +93,11 @@ The main program starts at `$8000`. Board pixels use `$E000-$F7FF`, board attrib
 - `src/` — game, physics, robots, rendering, generated assets, and audio source.
 - `loader/turbo_bootstrap.asm` — resident BASIC bootstrap that relocates the decoder.
 - `loader/turbo_loader.asm` — production fixed-sequence decoder, executed from uncontended high RAM.
-- `loader/frozen/` — locked game and loading-screen tape inputs.
-- `loader/` — also retains the earlier ZQLoader adaptation and licence for provenance/reference.
-- `tools/` — Pasmo preparation, tape builders/validators, simulator, and deterministic packager.
+- `loader/ZQLOADER_LICENSE.txt` — retained loader attribution and licence notice.
+- `tools/` — current screen/TZX builders, validators, simulator, Pasmo preparation, and deterministic packager.
 - `vendor/ZX-Spectrum-1-Bit-Routines/` — upstream audio reference, provenance, and licence.
-- `dist/reference/` — comparison-only historical material.
-- `build/` — disposable build products.
-- `dist/` — accepted release outputs after a successful build.
+- `build/` — disposable build products, never shipped.
+- `dist/` — accepted TZX, release ZIP, and hashes.
 
 ## Verification status
 
@@ -118,4 +111,4 @@ The run-time harness exercises all four robot seats, turn progression, repeated 
 
 Carrom Arena © 2026 Supratim Sanyal of SANYALnet Labs, under the SANYALnet Labs Non-Commercial License used by the original project.
 
-The 1-bit audio work derives techniques/code from the utz/irrlicht-project `ZX-Spectrum-1-Bit-Routines` collection; see the bundled upstream licence and `PROVENANCE.md`. The earlier ZQLoader adapter is retained for provenance under its MIT licence; see `loader/ZQLOADER_LICENSE.txt`. It is no longer used to build the production turbo tape.
+The 1-bit audio work derives techniques/code from the utz/irrlicht-project `ZX-Spectrum-1-Bit-Routines` collection; see the bundled upstream licence and `PROVENANCE.md`. ZQLoader attribution and its MIT licence are retained in `loader/ZQLOADER_LICENSE.txt`; production uses the fixed loader sources in `loader/`.

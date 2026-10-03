@@ -88,7 +88,7 @@ jobs:
 
       - name: Record SHA-256 hashes
         run: |
-          sha256sum build/carrom.bin loader/frozen/game.bin loader/frozen/loading.scr dist/carrom_fast.tzx dist/zx-carrom.zip | tee dist/SHA256SUMS
+          sha256sum build/carrom.bin build/loading.scr dist/carrom_fast.tzx dist/zx-carrom.zip | tee dist/SHA256SUMS
 
       - name: Verify clean source state
         run: |

@@ -4,8 +4,7 @@
 lower case has a 4-pixel x-height with real descenders on row 7.
 
 Writes font64.asm: 8 bytes per glyph, the glyph in the HIGH nibble (bits 7-5, bit 4 is
-the gap), so the printer masks with $F0 for even half-columns and shifts right 4 for odd.
-Also writes font64.png, a specimen sheet."""
+the gap), so the printer masks with $F0 for even half-columns and shifts right 4 for odd."""
 import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -135,17 +134,4 @@ if __name__ == '__main__':
     for i in range(0, len(data), 16):
         lines.append("    db " + ",".join(str(b) for b in data[i:i + 16]))
     open(os.path.join(HERE, 'font64.asm'), 'w').write("\n".join(lines) + "\n")
-    try:
-        from PIL import Image
-        im = Image.new('RGB', (32 * 4 + 8, 3 * 8 + 8), (0, 0, 0xD7))
-        px = im.load()
-        for i in range(96):
-            gx, gy = 4 + (i % 32) * 4, 4 + (i // 32) * 8
-            for y in range(8):
-                for x in range(4):
-                    if data[i * 8 + y] & (0x80 >> x):
-                        px[gx + x, gy + y] = (0xFF, 0xFF, 0xFF)
-        im.resize((im.width * 6, im.height * 6), Image.NEAREST).save(os.path.join(HERE, 'font64.png'))
-    except ImportError:
-        pass
     print("font64.asm written")
