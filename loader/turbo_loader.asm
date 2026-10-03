@@ -18,7 +18,7 @@ loader_start:
         jr c,load_error
 
         ld hl,0x8000
-        ld ix,24565
+        ld ix,24569
         call load_block
         jr c,load_error
 

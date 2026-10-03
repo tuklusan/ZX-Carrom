@@ -125,8 +125,8 @@ def main():
 
     if len(screen) != 6912:
         raise SystemExit(f'loading screen is {len(screen)} bytes, expected 6912')
-    if len(game) != 24565:
-        raise SystemExit(f'game is {len(game)} bytes, expected 24565')
+    if len(game) != 24569:
+        raise SystemExit(f'game is {len(game)} bytes, expected 24569')
 
     program = basic_program(bootstrap, loader)
     blocks = [
