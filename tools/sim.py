@@ -268,7 +268,7 @@ def main():
                   mem[sym['score'] + 1] + 100 * mem[sym['score'] + 3])
             left = (mem[sym['left']], mem[sym['left'] + 1])
             msgs.append((now, text))
-            if 'THINKS' in text or ' BREAK' in text:
+            if 'THINKING' in text or ' BREAK' in text:
                 # every play-area pixel outside the pieces must match the clean board copy
                 rects=[]
                 for i in range(20):
@@ -299,13 +299,13 @@ def main():
                     info+=f" coin@({mem[b+1]}.{mem[b]*100//256},{mem[b+3]}.{mem[b+2]*100//256}) seatuv=({sb(mem[sym['ai_u']+bid])},{sb(mem[sym['ai_v']+bid])})"
                 info+=f" g=({w('fc_gx')/16:.1f},{w('fc_gy')/16:.1f}) s=({w('fc_sx')/16:.1f},{w('fc_sy')/16:.1f})"
                 print(info)
-            if a.accept and ('THINKS' in text or ' BREAK' in text):
+            if a.accept and ('THINKING' in text or ' BREAK' in text):
                 seats_seen.add(mem[sym['seat']])
                 play_msgs += 1
-            if a.accept and 'SHOOTS' in text:
+            if a.accept and 'STRIKING' in text:
                 strikes += 1
             if a.accept:
-                stray_total += bad if ('THINKS' in text or ' BREAK' in text) else 0
+                stray_total += bad if ('THINKING' in text or ' BREAK' in text) else 0
             if not a.quiet:
                 print(f"{now:8.1f}s  [{sc[0]:3d}-{sc[1]:3d}] left W{left[0]} B{left[1]} q{mem[sym['qstate']]}  {text}")
     screenshot(mem, f"{a.prefix}_end.png")
