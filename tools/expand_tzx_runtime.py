@@ -66,7 +66,7 @@ def check_fuse(src):
         return
     dbg='\n'.join([
         'delete',
-        'breakpoint 32768',
+        'breakpoint 23784',
         'commands 1',
         'print 0x4242',
         'exit 0',
@@ -89,8 +89,8 @@ def check_fuse(src):
         if p.returncode != 0:
             raise SystemExit(f'Fuse exact-tape check failed in {name} mode: exit {p.returncode}')
         if '0x4242' not in p.stdout:
-            raise SystemExit(f'Fuse exact-tape check did not reach 32768 in {name} mode')
-        print(f'Fuse exact-tape check: {name} mode reached 32768')
+            raise SystemExit(f'Fuse exact-tape check did not reach resident loader in {name} mode')
+        print(f'Fuse exact-tape check: {name} mode reached resident loader')
 
 def convert(src,dst):
     d=open(src,'rb').read()
