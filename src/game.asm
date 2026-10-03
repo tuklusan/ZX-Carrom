@@ -1101,12 +1101,11 @@ turn_end:
 ; A = coin colour, C = forced returns before Due. Returns that colour only.
 ; rret[colour] receives the physical return count for session accounting.
 return_colour:
-        ld (r_b),a
-        ld a,c
-        ld (rforced),a
+        push af                   ; colour rides the stack while the bodies misbehave
         xor a
         ld (rgiven),a
-        ld a,(r_b)
+        pop af
+        push af
         ld e,a
         ld d,0
         ld hl,dues
@@ -1114,12 +1113,9 @@ return_colour:
         ld a,(hl)
         add a,c                  ; wanted = forced + Due
         ld (rgive),a
-        ld a,(r_b)
-        ld b,a
-        add a,a
-        add a,a
-        add a,a
-        add a,b                  ; first body id of this colour
+        ld a,e
+        neg
+        and 9                    ; colour 0 -> body 0, colour 1 -> body 9
         ld (rid),a
         ld b,9
 .loop:  push bc
@@ -1139,28 +1135,26 @@ return_colour:
         call find_spot
         jr c,.next
 2:      call put_back
-        ld a,(r_b)
-        ld e,a
-        ld d,0
-        ld hl,left
-        add hl,de
-        inc (hl)
         ld hl,rgiven
         inc (hl)
 .next:  ld hl,rid
         inc (hl)
         pop bc
         djnz .loop
-        ld a,(rforced)
-        ld b,a
+        pop af
+        ld e,a
+        ld d,0
         ld a,(rgiven)
-        sub b
+        ld b,a
+        ld hl,left
+        add hl,de
+        add a,(hl)
+        ld (hl),a
+        ld a,b
+        sub c
         jr nc,3F
         xor a
 3:      ld b,a                   ; B = returns that actually pay Due
-        ld a,(r_b)
-        ld e,a
-        ld d,0
         ld hl,dues
         add hl,de
         ld a,(hl)
