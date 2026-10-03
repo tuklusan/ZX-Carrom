@@ -1126,8 +1126,7 @@ msg_show:
 
 ; mover label "RED-N"
 msg_mover:
-        ld a,(seat)
-        and 1
+        call mover_pair
         call msg_pair
         ld a,'-'
         call msg_c

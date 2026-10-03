@@ -489,9 +489,10 @@ pt_ji:          dw 0
 pt_jj:          dw 0
 pt_push:        db 0
 ; match state
-seat:           db 0
-consecutive:    db 0
-white_pair:     db 0
+seat:           db 0            ; physical N/E/S/W turn position
+player_at_seat: ds 4            ; logical player occupying each physical seat
+pass_streak:    db 0            ; consecutive turn passes on this board
+white_pair:     db 0            ; logical pair (players 0/2 or 1/3) playing white
 break_off:      db 0
 games_played:   db 0
 boards_in_game: db 0

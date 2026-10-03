@@ -65,6 +65,8 @@ def main():
     pc = snap.pc
     msgs = []
     seats_seen = set()
+    logical_players_seen = set()
+    player_map_clean = True
     modes_seen = set()
     fast_seen = set()
     phases_seen = set()
@@ -300,7 +302,12 @@ def main():
                 info+=f" g=({w('fc_gx')/16:.1f},{w('fc_gy')/16:.1f}) s=({w('fc_sx')/16:.1f},{w('fc_sy')/16:.1f})"
                 print(info)
             if a.accept and ('THINKING' in text or ' BREAK' in text):
-                seats_seen.add(mem[sym['seat']])
+                physical_seat = mem[sym['seat']]
+                seats_seen.add(physical_seat)
+                player_map = list(mem[sym['player_at_seat']:sym['player_at_seat'] + 4])
+                player_map_clean = player_map_clean and sorted(player_map) == [0, 1, 2, 3]
+                if physical_seat < 4:
+                    logical_players_seen.add(player_map[physical_seat])
                 play_msgs += 1
             if a.accept and 'STRIKING' in text:
                 strikes += 1
@@ -345,6 +352,8 @@ def main():
 
         checks = {
             'four seats': seats_seen == {0, 1, 2, 3},
+            'four logical players': logical_players_seen == {0, 1, 2, 3},
+            'player map permutation': player_map_clean,
             'turn flow': play_msgs >= 8 and strikes >= 4,
             'sound cycle': {0, 1, 2}.issubset(modes_seen),
             'speed toggle': {0, 1}.issubset(fast_seen),

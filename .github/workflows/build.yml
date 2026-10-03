@@ -73,6 +73,9 @@ jobs:
             grep -Fq 'Simulation stopped (PC at start address): PC=32768' "/tmp/fast-load-${n}.log"
           done
           cp /tmp/carrom_fast_1.z80 /tmp/carrom_fast.z80
+          /tmp/zxrun/bin/python tools/test_player_mapping.py --snap /tmp/carrom_fast.z80 --sym tools/carrom.sym
+          /tmp/zxrun/bin/python tools/test_queen_history.py --snap /tmp/carrom_fast.z80 --sym tools/carrom.sym
+          /tmp/zxrun/bin/python tools/test_pass_replay.py --snap /tmp/carrom_fast.z80 --sym tools/carrom.sym
           /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_fast.z80 --secs 0 --prefix /tmp/loadscreen --quiet
           /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_fast.z80 --secs 150 --prefix /tmp/live --shots 1,10,30,65,90,120,145 --seed 4660 --accept
           mkdir -p build/runtime-view

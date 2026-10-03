@@ -15,6 +15,7 @@ PH_WAIT         EQU 8
 PH_AFTERBOARD   EQU 9
 PH_AFTERGAME    EQU 10
 PH_NEWMATCH     EQU 11
+PASS_REPLAY_LIMIT EQU 12       ; ICF 137: four doubles players passing three times each
 
 QA_NONE EQU 0
 QA_PEND EQU 1
@@ -44,6 +45,8 @@ PHTAB:  dw ph_newboard,ph_think0,ph_think,ph_place,ph_hold,ph_aim,ph_move
 ; 351 bytes — Starts matches, boards, and turns without asking for a committee.
 
 new_match:
+        call reset_player_map
+        call record_progress
         xor a
         ld (games_played),a
         ld (gw),a
@@ -108,16 +111,26 @@ ph_newboard:
 
 setup_board:
         call reset_board_pixels
-        ; ICF 49: the break passes in turn round the table, shifted by one for each game played
+        ; ICF 49: the logical breaker passes in turn, shifted by one for each game played.
+        ; The current seat map then tells us where that player is physically sitting.
         ld a,(boards_in_game)
         ld hl,games_played
         add a,(hl)
         ld hl,break_off
         add a,(hl)
         and 3
-        ld (seat),a
+        ld c,a
         and 1
-        ld (white_pair),a       ; the breaker's pair plays white (ICF 43)
+        ld (white_pair),a       ; the breaker's logical pair plays white (ICF 43)
+        ld a,c
+        call seat_for_player
+        jr nc,.seat_ok
+        ; A corrupt map is not allowed to leak an out-of-range physical seat.
+        ; Recover to the fresh-match identity map; direct callers can detect carry.
+        call reset_player_map
+        ld a,c
+.seat_ok:
+        ld (seat),a
         ld ix,BODIES
         ld b,0
 .lp:    ld (ix+BID),b
@@ -198,14 +211,113 @@ setup_board:
         ld (qpend),a
         ld (break_made),a
         ld (attempts),a
-        ld (consecutive),a
+        ld (pass_streak),a
+        ret
+
+; logical-player mapping.  seat remains the physical N/E/S/W turn position.
+reset_player_map:
+        ld hl,player_at_seat
+        xor a
+        ld (hl),a
+        inc hl
+        inc a
+        ld (hl),a
+        inc hl
+        inc a
+        ld (hl),a
+        inc hl
+        inc a
+        ld (hl),a
+        ret
+
+; A = physical seat -> A = logical player.  Physical callers keep seat geometry separate.
+logical_for_seat:
+        and 3
+        ld e,a
+        ld d,0
+        ld hl,player_at_seat
+        add hl,de
+        ld a,(hl)
+        ret
+
+; current mover's logical player
+logical_player:
+        ld a,(seat)
+        jp logical_for_seat
+
+; current mover's logical pair (0 = players 0/2, 1 = players 1/3)
+mover_pair:
+        call logical_player
+        and 1
+        ret
+
+; A = logical player -> A = physical seat, carry set and A=$FF if absent.
+; Exactly four entries are examined so a damaged map cannot spin forever.
+seat_for_player:
+        ld c,a
+        ld hl,player_at_seat
+        ld b,4
+        xor a
+1:      ld e,(hl)
+        ld d,a
+        ld a,e
+        cp c
+        ld a,d
+        jr z,2F
+        inc hl
+        inc a
+        djnz 1B
+        ld a,0xFF
+        scf
+        ret
+2:      or a                    ; clear carry on success
+        ret
+
+; Carry clear only when all four logical players occur exactly once.
+; With four slots, finding 0,1,2,3 proves there can be no duplicate or stray value.
+validate_player_map:
+        xor a
+        call seat_for_player
+        ret c
+        ld a,1
+        call seat_for_player
+        ret c
+        ld a,2
+        call seat_for_player
+        ret c
+        ld a,3
+        call seat_for_player
+        ret
+
+; Every logical player moves one physical seat clockwise between games.
+; Corrupt input is rejected with carry set, recovered to identity, then rotated.
+rotate_players_right:
+        call validate_player_map
+        ld c,0
+        jr nc,.rotate
+        call reset_player_map
+        ld c,1
+.rotate:
+        ld a,(player_at_seat+3)
+        ld b,a
+        ld a,(player_at_seat+2)
+        ld (player_at_seat+3),a
+        ld a,(player_at_seat+1)
+        ld (player_at_seat+2),a
+        ld a,(player_at_seat)
+        ld (player_at_seat+1),a
+        ld a,b
+        ld (player_at_seat),a
+        ld a,c
+        or a
+        ret z
+        scf
         ret
 
 ; colour (0 white, 1 black) of the side to move
 mover_colour:
-        ld a,(seat)
-        and 1
-pair_colour:            ; A = pair -> A = colour
+        call mover_pair
+pair_colour:            ; A = logical pair -> A = colour
         ld b,a
         ld a,(white_pair)
         cp b
@@ -544,9 +656,25 @@ ph_move:
 ; ---------------------------------------------------------------- the rules (ICF Laws, doubles)
 ; 2001 bytes — Applies the Carrom rules, including the queen's impressive paperwork.
 
+; A = pocketed coin id 0..17.  Return C = coin colour and remember that this
+; colour has reached a pocket during the current board.  HL/B are preserved.
+record_coin_history:
+        cp 9
+        ccf
+        ld a,0
+        adc a,0
+        ld c,a
+        ld e,a
+        ld d,0
+        push hl
+        ld hl,had
+        add hl,de
+        ld (hl),1
+        pop hl
+        ret
+
 ph_resolve:
-        ld a,(seat)
-        and 1
+        call mover_pair
         ld (rA),a
         call mover_colour
         ld (rcA),a
@@ -576,11 +704,7 @@ ph_resolve:
         ld a,1
         ld (rQ),a
         jr .cn
-2:      cp 9
-        ccf
-        ld a,0
-        adc a,0
-        ld c,a
+2:      call record_coin_history
         ld a,(rcA)
         cp c
         jr nz,3F
@@ -773,20 +897,9 @@ ph_resolve:
         jr .qdone
 .nn:    call n_cont              ; 48
 .qdone:
-        ; the right to the queen (92)
-        ld a,(rS)
-        or a
-        jr nz,8F
-        ld a,(rn)
-        or a
-        jr z,8F
-        ld a,(rcA)
-        ld e,a
-        ld d,0
-        ld hl,had
-        add hl,de
-        ld (hl),1
-8:      ; ---- end of the board? (ICF 52, 53, 102-112)
+        ; Pocket-event colour history was recorded while pk_ids were counted.
+        ; Returns later in this routine must not erase that board-long fact.
+        ; ---- end of the board? (ICF 52, 53, 102-112)
         call board_result
         jp c,finish_board
         ; ---- the queen's fate
@@ -952,12 +1065,12 @@ ph_resolve:
         jr z,.adv
         ld hl,S_CONT
         call msg_s
-        ld hl,consecutive
-        inc (hl)
+        call record_progress     ; a lawful continuation breaks the pass sequence
         jr .fin
 .adv:   ld hl,S_PASS
         call msg_s
-        call advance_seat
+        call pass_turn
+        ret c                    ; threshold schedules a clean replay of this board
 .fin:   call msg_show
         call render
         call hud
@@ -972,13 +1085,31 @@ n_cont: ld a,(rn)
         ld (rcont),a
         ret
 
-advance_seat:
+; One actual turn pass. Carry means ICF 137 reached three passes by each of
+; the four doubles players, so this same board is scheduled for a clean replay.
+pass_turn:
+        ld hl,pass_streak
+        inc (hl)
+        ld a,(hl)
+        cp PASS_REPLAY_LIMIT
+        jr c,.advance
         xor a
-        ld (consecutive),a
+        ld (hl),a
+        ld a,PH_NEWBOARD
+        ld (phase),a
+        scf
+        ret
+.advance:
         ld a,(seat)
         inc a
         and 3
         ld (seat),a
+        or a                    ; clear carry
+        ret
+
+record_progress:
+        xor a
+        ld (pass_streak),a
         ret
 
 turn_pass:      ; HL = message, the turn goes to the next seat
@@ -986,7 +1117,8 @@ turn_pass:      ; HL = message, the turn goes to the next seat
         call msg_clear
         pop hl
         call msg_s
-        call advance_seat
+        call pass_turn
+        ret c
         jr turn_end
 turn_stay:
         push hl
@@ -1452,6 +1584,7 @@ ph_aftergame:
         sub b
         cp 2
         jr nc,.m
+        call rotate_players_right
         call new_game
         jp hud
 .m:     call msg_clear
@@ -1744,7 +1877,7 @@ num_digits:
         ret
 
 msg_profile:
-        ld a,(seat)
+        call logical_player
         add a,a
         ld l,a
         ld h,0
@@ -1760,8 +1893,8 @@ msg_profile:
 ; 2499 bytes — Chooses robot shots, scores options, and converts intent into velocity.
 ;
 ; Candidate generation (ghost-coin aiming at each pocket for every legal target), a cheap
-; geometric check of both paths, then utility scoring with a per-seat weighting profile:
-;   N AGGRESSIVE  E BALANCED  S DEFENSIVE  W TRICKSTER
+; geometric check of both paths, then utility scoring with a per-player weighting profile:
+;   player 0 AGGRESSIVE, 1 BALANCED, 2 DEFENSIVE, 3 TRICKSTER
 ; Coordinates are in the seat frame, in half pixels: u along the baseline, v forward.
 
 ; profile: wc, wd, cmin, qbonus(2), cutbonus, margin(/64), jitter(1/16 px)
@@ -1787,8 +1920,8 @@ PF_MARG EQU 6
 PF_JIT  EQU 7
 
 ai_begin:
-        ; profile
-        ld a,(seat)
+        ; profile follows logical player identity, not the physical chair
+        call logical_player
         add a,a
         add a,a
         add a,a
