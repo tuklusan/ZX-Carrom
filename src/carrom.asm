@@ -419,28 +419,6 @@ PROFNAMES:  dw S_AGG,S_BAL,S_DEF,S_TRK
 
         INCLUDE "tables.asm"
 
-; 30 bytes — Scores both coin colours by ownership; the striker gets no voting rights.
-stats_stroke:
-        ld a,(rn)
-        ld b,a
-        ld a,(rm)
-        ld c,a
-        ld a,(rcA)
-        or a
-        jr z,1F
-        ld a,b
-        ld b,c
-        ld c,a
-1:      push bc
-        xor a
-        call stats_colour
-        pop bc
-        ret c
-        ld b,c
-        ld a,1
-stats_second_call:
-        jp stats_colour
-
         INCLUDE "font64.asm"
         INCLUDE "music.asm"
 
@@ -494,6 +472,9 @@ msg_pos:        db 0
 rc_ax:          dw 0
 rc_ay:          dw 0
 rc_s:           dw 0
+rc_t:           ds 4
+ci:             db 0
+cj:             db 0
 pt_r16:         db 0
 pt_r2:          dw 0
 pt_dx:          dw 0
@@ -546,12 +527,12 @@ rqc:            db 0
 qa:             db 0
 rcont:          db 0
 rnewdue:        db 0
+rret:           ds 2            ; physical returned counts by coin colour
 rgive:          db 0
 rgiven:         db 0
 rid:            db 0
 rW:             db 0
 rP:             db 0
-rret            EQU rW          ; normal-stroke returned counts by coin colour
 r_ownl:         db 0
 r_oppl:         db 0
 r_a:            db 0
@@ -659,6 +640,7 @@ sg_noend:       db 0
 ord_x:          ds 20
 ord_y:          ds 20
 ord_id:         ds 20
+ord_f:          ds 20
 ord_n:          db 0
 sw_left:        db 0
 sw_cnt:         db 0
@@ -692,6 +674,8 @@ gm_nage:        db 0
 gm_drum:        db 0
 gm_dage:        db 0
 gm_np:          dw 0
+gm_hi:          db 0
+gm_lo:          dw 0
 ; text
 c64_pad:        db 0
 title_x:        db 0

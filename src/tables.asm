@@ -255,6 +255,35 @@ ROWLO:
     db 64,64,64,64,64,64,64,64,96,96,96,96,96,96,96,96
     db 128,128,128,128,128,128,128,128,160,160,160,160,160,160,160,160
     db 192,192,192,192,192,192,192,192,224,224,224,224,224,224,224,224
+
+; 40 bytes — Public PTS accounting lives in ROWLO's otherwise unused tail padding.
+stats_board:
+        xor a
+        ld (rret),a
+        ld (rret+1),a
+        jp stats_stroke
+
+stats_stroke:
+        ld a,(rn)
+        ld b,a
+        ld a,(rm)
+        ld c,a
+        ld a,(rcA)
+        or a
+        jr z,1F
+        ld a,b
+        ld b,c
+        ld c,a
+1:      push bc
+        xor a
+        call stats_colour
+        pop bc
+        ret c
+        ld b,c
+        ld a,1
+stats_second_call:
+        jp stats_colour
+
     align 256
 ROWHI:
     db 64,65,66,67,68,69,70,71,64,65,66,67,68,69,70,71

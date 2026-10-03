@@ -32,7 +32,7 @@ def main():
     args = ap.parse_args()
     sym = load_symbols(args.sym)
     required = (
-        'stats_stroke', 'stats_clear', 'stats_second_call',
+        'stats_stroke', 'stats_board', 'stats_clear', 'stats_second_call',
         'score', 'rn', 'rm', 'rcA', 'rA', 'rret', 'white_pair',
     )
     missing = [name for name in required if name not in sym]
@@ -99,6 +99,18 @@ def main():
     set_points(0, 4)
     check(not stroke(0, 1, ret1=1), 'same-stroke net signalled overflow')
     check(points(1) == 4, 'pocket then return of one colour did not net to zero')
+
+    set_points(5, 0)
+    mem[sym['rret']] = 7
+    mem[sym['rret'] + 1] = 8
+    mem[sym['rn']] = 1
+    mem[sym['rm']] = 0
+    mem[sym['rA']] = 0
+    mem[sym['rcA']] = 0
+    mem[sym['white_pair']] = 0
+    check(not call_routine(sym['stats_board']), 'board-end accounting signalled overflow')
+    check((points(0), points(1)) == (6, 0),
+          'board-end accounting consumed stale normal-stroke returns')
 
     set_points(0, 0)
     check(not stroke(0, 0, ret1=1), 'underflow case signalled overflow')

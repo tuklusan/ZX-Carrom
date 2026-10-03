@@ -1484,7 +1484,7 @@ pscore: ld e,a
         ret
 
 finish_board:
-        call stats_stroke
+        call stats_board
         push af
         ld a,(rP)
         cp 13

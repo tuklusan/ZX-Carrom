@@ -331,12 +331,16 @@ def main():
         for i in range(8):
             mem[base + i] = 0
         mem[sym['rA']] = 0
+        mem[sym['rcA']] = 0
+        mem[sym['white_pair']] = 0
+        mem[sym['rm']] = 0
+        mem[sym['rret']] = 0
+        mem[sym['rret'] + 1] = 0
         mem[sym['rn']] = 2
-        mem[sym['rgiven']] = 0
         counter_add = call_routine(sym['stats_stroke']) and mem[base] == 2 and mem[base + 2] == 0
 
         mem[sym['rn']] = 0
-        mem[sym['rgiven']] = 1
+        mem[sym['rret']] = 1
         counter_return = call_routine(sym['stats_stroke']) and mem[base] == 1 and mem[base + 2] == 0
 
         mem[base] = 99
@@ -344,7 +348,7 @@ def main():
         mem[sym['boards_won']] = 4
         mem[sym['games_won']] = 5
         mem[sym['rn']] = 1
-        mem[sym['rgiven']] = 0
+        mem[sym['rret']] = 0
         overflow_signal = call_routine(sym['stats_stroke']) and bool(regs[F] & 1)
         if overflow_signal:
             overflow_signal = call_routine(sym['stats_clear'])
