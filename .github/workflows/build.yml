@@ -109,7 +109,7 @@ jobs:
           done
           cp /tmp/carrom_fast_1.z80 /tmp/carrom_fast.z80
           /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_std.z80 --secs 0 --prefix /tmp/loadscreen --quiet
-          /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_std.z80 --secs 96 --prefix /tmp/std --shots 1,10,30,65,90 --seed 4660 --accept
+          /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_std.z80 --secs 150 --prefix /tmp/std --shots 1,10,30,65,90,120,145 --seed 4660 --accept
           mkdir -p build/runtime-view
           cp /tmp/loadscreen_end.png build/runtime-view/loading.png
           cp /tmp/std_0001.0.png build/runtime-view/intro.png

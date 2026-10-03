@@ -75,8 +75,12 @@ def main():
     pause_frozen = True
     pause_resumed = False
     restart_seen = False
-    loading_band_clean = all(mem[0x5800+r*32+x] == (0x4F if r < 3 else 0x47)
-                             for r in range(4) for x in range(32))
+    loading_band_clean = (
+        all((mem[0x5800+r*32+x] & 0x38) == 0x08
+            for r in range(3) for x in range(32))
+        and all((mem[0x5800+r*32+x] & 0x38) != 0x08
+                for r in range(3,24) for x in range(32))
+    )
     loading_board_uniform = all(mem[0x5800+r*32+x] == 0x45
                                 for r in range(6,17) for x in range(9,23))
     def paddr0(xb,y):
@@ -214,7 +218,7 @@ def main():
             if 8.0 <= now_s < 8.2 or 9.5 <= now_s < 9.7 or 11.0 <= now_s < 11.2: kb[7] |= 4
             if 13.0 <= now_s < 13.2 or 15.0 <= now_s < 15.2: kb[7] |= 1
             if 17.0 <= now_s < 17.2 or 18.0 <= now_s < 18.2: kb[1] |= 8
-            if 75.0 <= now_s < 75.2: kb[2] |= 8
+            if 125.0 <= now_s < 125.2: kb[2] |= 8
         if 1.5 <= now_s < 1.7:
             kb[6] |= 1                       # ENTER: leave the title page
         if a.accept:
@@ -224,7 +228,7 @@ def main():
             if mem[sym['gm_run']] and not mem[sym['music_off']] and not mem[sym['paused']]:
                 p = mem[sym['gm_songp']] | (mem[sym['gm_songp'] + 1] << 8)
                 song_positions.add(p)
-                if song_prev is not None and p < song_prev and now_s < 74.0:
+                if song_prev is not None and p < song_prev and now_s < 124.0:
                     song_wraps += 1
                 song_prev = p
             state = (mem[sym['phase']], mem[sym['timer']], mem[sym['ticks']] | (mem[sym['ticks'] + 1] << 8), mem[sym['seat']], mem[sym['gm_songp']] | (mem[sym['gm_songp'] + 1] << 8), mem[sym['star_far']], mem[sym['star_mid']], mem[sym['star_near']])
@@ -235,7 +239,7 @@ def main():
                     pause_frozen = False
             if pause_ref is not None and not mem[sym['paused']] and now_s >= 15.3 and state != pause_ref:
                 pause_resumed = True
-            if 75.2 <= now_s <= 77.0 and mem[sym['phase']] == 8 and mem[sym['timer']] >= 60:
+            if 125.2 <= now_s <= 127.0 and mem[sym['phase']] == 8 and mem[sym['timer']] >= 60:
                 if not any(mem[sym[k]] for k in ('games_played', 'boards_in_game')) and not any(mem[sym['score'] + i] for i in range(2)) and not any(mem[sym['boards_won'] + i] for i in range(2)) and not any(mem[sym['games_won'] + i] for i in range(2)):
                     restart_seen = True
         return True
