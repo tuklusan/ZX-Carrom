@@ -50,8 +50,8 @@ The standard tape sequence remains BASIC loader, full 6912-byte loading SCREEN$,
 
 The fast TZX is deliberately fixed and small. It contains exactly four blocks:
 
-1. BASIC header — TZX `0x11`, ROM timing, 512 pilot pulses;
-2. BASIC program/data — TZX `0x11`, ROM timing, 512 pilot pulses;
+1. BASIC header — TZX `0x11`, ROM timing, 2824 pilot pulses;
+2. BASIC program/data — TZX `0x11`, ROM timing, 2420 pilot pulses;
 3. loading screen — compact generalized-data block `0x19`;
 4. game — compact generalized-data block `0x19`.
 
