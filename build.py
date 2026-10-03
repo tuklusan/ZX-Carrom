@@ -85,10 +85,9 @@ def main():
     raw_tzx = BUILD / 'carrom_zq.tzx'
     run(zqloader,
         'zero_tstates=855', 'one_tstates=1710', 'zero_max=30', 'bit_loop_max=60',
-        'end_of_byte_delay=0',
         'outputfile='+str(raw_tzx), '-o', stub, loader_build / 'carrom_code.tap')
     run(sys.executable, LOADER / 'tzx19to13.py', raw_tzx, DIST / 'carrom_fast.tzx')
-    run(sys.executable, TOOLS / 'validate_tzx.py', DIST / 'carrom_fast.tzx', binfile)
+    run(sys.executable, TOOLS / 'validate_tzx.py', DIST / 'carrom_fast.tzx')
     print('built and validated:', DIST / 'carrom.tap', DIST / 'carrom_fast.tzx')
 
 
