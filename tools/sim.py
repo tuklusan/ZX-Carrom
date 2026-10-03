@@ -266,133 +266,7 @@ def main():
         elapsed = (regs[T] - t0) / 3500000
         run_stop = quit_target if a.quit_check and elapsed >= 7.5 else stop
         with contextlib.redirect_stdout(io.StringIO()):
-            tracer.run(pc, run_stop, 0, nxt - regs[T], True, draw, None, None, None, '
-        if shots and regs[T] >= t0 + int(shots[0] * 3500000):
-            screenshot(mem, f"{a.prefix}_{shots[0]:06.1f}.png")
-            shots.pop(0)
-        if pc == stop:
-            text = bytes(mem[sym['msg_buf']:sym['msg_buf'] + 64]).split(b'\0')[0].decode('latin1').rstrip()
-            sc = (mem[sym['score']] + 100 * mem[sym['score'] + 2],
-                  mem[sym['score'] + 1] + 100 * mem[sym['score'] + 3])
-            left = (mem[sym['left']], mem[sym['left'] + 1])
-            msgs.append((now, text))
-            if 'THINKS' in text or ' BREAK' in text:
-                # every play-area pixel outside the pieces must match the clean board copy
-                rects=[]
-                for i in range(20):
-                    b=sym['BODIES']+i*24
-                    if mem[b+14]&1:
-                        r=mem[b+20]; rects.append((mem[b+1]-r-1, mem[b+3]-r-1, mem[b+1]+r+1, mem[b+3]+r+1))
-                    if mem[b+18]:   # still drawn where it was last frame (redrawn on the next render)
-                        rects.append((mem[b+16], mem[b+17], mem[b+16]+2*mem[b+20], mem[b+17]+2*mem[b+20]))
-                bad=0; strays=[]
-                for y in range(16,176):
-                    base = 0x4000 | ((y & 0xC0) << 5) | ((y & 7) << 8) | ((y & 0x38) << 2)
-                    for xb in range(6,26):
-                        d=mem[base+xb]^mem[base+xb+sym['BGBUF']-0x4000]
-                        if d:
-                            for k in range(8):
-                                if d&(128>>k):
-                                    x=xb*8+k
-                                    if not any(r[0]<=x<=r[2] and r[1]<=y<=r[3] for r in rects): bad+=1; bx,by=x,y; strays.append((x,y))
-                if bad:
-                    print(f"   !!! {bad} stray pixels, e.g. ({bx},{by}) at {now:.1f}s")
-                    if a.verbose: print("      ", sorted(strays)[:40]); print("       bodies", [(mem[sym['BODIES']+i*24+1],mem[sym['BODIES']+i*24+3],mem[sym['BODIES']+i*24+14]) for i in range(20)])
-                bid=mem[sym['ai_bid']]; w=lambda k: (mem[sym[k]]|mem[sym[k]+1]<<8)
-                sw=lambda v: v-65536 if v>32767 else v
-                sb=lambda v: v-256 if v>127 else v
-                info=f"      mode={mem[sym['ai_mode']]} bid={bid} bp={mem[sym['ai_bp']]} su={sb(mem[sym['ai_bsu']])} c64={mem[sym['ai_bc64']]} best={sw(w('ai_best'))} v=({sw(w('plan_vx'))},{sw(w('plan_vy'))}) tn={mem[sym['ai_tn']]}"
-                if bid<19:
-                    b=sym['BODIES']+bid*24
-                    info+=f" coin@({mem[b+1]}.{mem[b]*100//256},{mem[b+3]}.{mem[b+2]*100//256}) seatuv=({sb(mem[sym['ai_u']+bid])},{sb(mem[sym['ai_v']+bid])})"
-                info+=f" g=({w('fc_gx')/16:.1f},{w('fc_gy')/16:.1f}) s=({w('fc_sx')/16:.1f},{w('fc_sy')/16:.1f})"
-                print(info)
-            if a.accept and ('THINKS' in text or ' BREAK' in text):
-                seats_seen.add(mem[sym['seat']])
-                play_msgs += 1
-            if a.accept and 'SHOOTS' in text:
-                strikes += 1
-            if a.accept:
-                stray_total += bad if ('THINKS' in text or ' BREAK' in text) else 0
-            if not a.quiet:
-                print(f"{now:8.1f}s  [{sc[0]:3d}-{sc[1]:3d}] left W{left[0]} B{left[1]} q{mem[sym['qstate']]}  {text}")
-    screenshot(mem, f"{a.prefix}_end.png")
-    counter_add = counter_return = counter_reset = True
-    if a.accept:
-        def call_routine(addr):
-            sentinel = 0x7EFE
-            sp = (regs[SP] - 2) & 0xFFFF
-            mem[sp] = sentinel & 255
-            mem[(sp + 1) & 0xFFFF] = sentinel >> 8
-            regs[SP] = sp
-            tracer.run(addr, sentinel, 0, 50000, False, None, None, None, None, '$', '02X', '04X')
-            return regs[PC] == sentinel
-
-        base = sym['score']
-        for i in range(8):
-            mem[base + i] = 0
-        mem[sym['rA']] = 0
-        mem[sym['rn']] = 2
-        mem[sym['rgiven']] = 0
-        counter_add = call_routine(sym['stats_stroke']) and mem[base] == 2 and mem[base + 2] == 0
-
-        mem[sym['rn']] = 0
-        mem[sym['rgiven']] = 1
-        counter_return = call_routine(sym['stats_stroke']) and mem[base] == 1 and mem[base + 2] == 0
-
-        mem[base] = 99
-        mem[base + 2] = 9
-        mem[sym['boards_won']] = 4
-        mem[sym['games_won']] = 5
-        mem[sym['rn']] = 1
-        mem[sym['rgiven']] = 0
-        overflow_signal = call_routine(sym['stats_stroke']) and bool(regs[F] & 1)
-        if overflow_signal:
-            overflow_signal = call_routine(sym['stats_clear'])
-        counter_reset = overflow_signal and not any(mem[base + i] for i in range(8))
-
-        checks = {
-            'four seats': seats_seen == {0, 1, 2, 3},
-            'turn flow': play_msgs >= 8 and strikes >= 4,
-            'sound cycle': {0, 1, 2}.issubset(modes_seen),
-            'speed toggle': {0, 1}.issubset(fast_seen),
-            'pause freeze': pause_ref is not None and pause_frozen,
-            'pause resume': pause_resumed,
-            'restart': restart_seen,
-            'live points': any(len(v) > 1 for v in points_seen),
-            'points add': counter_add,
-            'points return': counter_return,
-            'counter reset': counter_reset,
-            'groove active': len(song_positions) >= 20,
-            'groove loop': song_wraps >= 1,
-            'effects idle': mem[sym['sfx_busy']] == 0,
-            'phase sane': phases_seen and max(phases_seen) <= 11,
-            'screen clean': stray_total == 0,
-            'loading band': loading_band_clean,
-            'loading board colour': loading_board_uniform,
-            'small flashing intro': intro_prompt and intro_border_clean,
-            'spectrum ribbon': ribbon_intro and ribbon_game,
-            'protected HUD/ribbon': protected_clean and east_margin_clean and east_base_clean and east_attr_clean,
-            'small game title': small_game_title and title_baseline,
-            'sparse space field': star_sparse,
-            'space parallax': star_changes[2] > star_changes[1] > star_changes[0] >= 10,
-        }
-        for name, ok in checks.items():
-            print(f"runtime {name}: {'PASS' if ok else 'FAIL'}")
-        bad_checks = [name for name, ok in checks.items() if not ok]
-        if bad_checks:
-            raise SystemExit('runtime checks failed: ' + ', '.join(bad_checks))
-    if a.quit_check:
-        expected_sp = (basic_sp + 2) & 0xFFFF
-        ok = quit_return_seen and regs[SP] == expected_sp and mem[sym['gm_run']] == 0
-        print(f"runtime quit BASIC return: {'PASS' if ok else 'FAIL'} pc={pc} sp={regs[SP]}")
-        if not ok:
-            raise SystemExit('quit return check failed')
-    return msgs
-
-if __name__ == '__main__':
-    main()
-, '02X', '04X')
+            tracer.run(pc, run_stop, 0, nxt - regs[T], True, draw, None, None, None, '$', '02X', '04X')
         pc = regs[24]
         now = (regs[T] - t0) / 3500000
         if a.quit_check and run_stop == quit_target and pc == quit_target:
@@ -514,8 +388,9 @@ if __name__ == '__main__':
         if bad_checks:
             raise SystemExit('runtime checks failed: ' + ', '.join(bad_checks))
     if a.quit_check:
-        ok = pc < 0x4000 and mem[sym['gm_run']] == 0
-        print(f"runtime quit return: {'PASS' if ok else 'FAIL'} pc={pc}")
+        expected_sp = (basic_sp + 2) & 0xFFFF
+        ok = quit_return_seen and regs[SP] == expected_sp and mem[sym['gm_run']] == 0
+        print(f"runtime quit BASIC return: {'PASS' if ok else 'FAIL'} pc={pc} sp={regs[SP]}")
         if not ok:
             raise SystemExit('quit return check failed')
     return msgs
