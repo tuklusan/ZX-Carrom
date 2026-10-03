@@ -543,7 +543,7 @@ ph_move:
         ret
 
 ; ---------------------------------------------------------------- the rules (ICF Laws, doubles)
-; 2002 bytes — Applies the Carrom rules, including the queen's impressive paperwork.
+; 2001 bytes — Applies the Carrom rules, including the queen's impressive paperwork.
 
 ph_resolve:
         ld a,(seat)
@@ -1484,7 +1484,7 @@ ph_aftergame:
         ld c,PH_NEWMATCH
         jp wait_then
 
-; 70 bytes — Follows coins into and back out of pockets; the abacus is merciless.
+; 69 bytes — Follows coins into and back out of pockets; the abacus is merciless.
 stats_stroke:
         ld a,(rn)
         ld b,a
