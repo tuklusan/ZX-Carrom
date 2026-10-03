@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build Carrom Arena ZX with Pasmo and emit validated TAP/TZX release files."""
+"""Build Carrom Arena ZX with Pasmo and emit the validated TZX release."""
 from pathlib import Path
 import argparse, os, shutil, subprocess, sys
 
@@ -69,11 +69,12 @@ def main():
     if binfile.read_bytes() != (FROZEN / 'game.bin').read_bytes():
         raise SystemExit('game binary differs from locked tape input')
 
-    # Standard tape remains a source check and compatibility artifact.
+    # Regenerate the loading picture through the internal tape helper, but keep
+    # its tape output under build/ only. It is not a release artifact.
     standard_build = BUILD / 'standard'
     standard_build.mkdir()
-    run(sys.executable, TOOLS / 'mktap.py', binfile, DIST / 'carrom.tap', standard_build)
-    run(sys.executable, TOOLS / 'validate_tap.py', DIST / 'carrom.tap', binfile)
+    internal_tape = standard_build / 'carrom_internal.tap'
+    run(sys.executable, TOOLS / 'mktap.py', binfile, internal_tape, standard_build)
     if (standard_build / 'loading.scr').read_bytes() != (FROZEN / 'loading.scr').read_bytes():
         raise SystemExit('loading screen differs from locked tape input')
 
@@ -95,7 +96,7 @@ def main():
         '--loader', fast_loader,
         '--screen', FROZEN / 'loading.scr',
         '--game', FROZEN / 'game.bin')
-    print('built and validated:', DIST / 'carrom.tap', DIST / 'carrom_fast.tzx')
+    print('built and validated:', DIST / 'carrom_fast.tzx')
 
 
 if __name__ == '__main__':

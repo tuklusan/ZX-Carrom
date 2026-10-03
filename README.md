@@ -2,7 +2,7 @@
 
 Carrom Arena is a ZX Spectrum 48K machine-code game in which four autonomous robot players play doubles carrom.
 
-Upstream project: `https://github.com/tuklusan/carrom-arena`. The production build is source-first: it assembles the game and the adapted turbo-loader bootstrap with Pasmo, builds both tape formats, and rejects structural mismatches.
+Upstream project: `https://github.com/tuklusan/carrom-arena`. The production build is source-first: it assembles the game and turbo bootstrap with Pasmo, builds the accepted TZX, and rejects structural mismatches.
 
 ## Build
 
@@ -21,7 +21,7 @@ The game and loading picture are locked while tape work is in progress:
 
 Every normal build still assembles the game and regenerates the loading picture, then compares both outputs byte-for-byte with those locked files. The fast-tape builder consumes the locked copies. An accidental game or loading-screen change therefore fails the build rather than silently changing the tape.
 
-The clean Ubuntu workflow builds Pasmo from the pinned fork, performs two clean production builds, compares game/TAP/TZX/release ZIP byte-for-byte, validates both tape formats, records SHA-256 hashes, and checks the exact fast TZX in Fuse before the longer play checks.
+The clean Ubuntu workflow builds Pasmo from the pinned fork, performs two clean production builds, compares game/TZX/release ZIP byte-for-byte, validates the TZX, records SHA-256 hashes, and checks the exact TZX in Fuse before the longer play checks.
 
 ## Repository vocabulary gate
 
@@ -39,14 +39,11 @@ Accepted project deliverables are repository content, not temporary job output. 
 
 ## Release files
 
-A successful build creates:
+A successful build creates the sole tape release:
 
-- `dist/carrom.tap` — standard ROM-speed Spectrum TAP;
 - `dist/carrom_fast.tzx` — compact turbo TZX.
 
-`tools/package_release.py dist/zx-carrom.zip` makes the deterministic source-plus-release archive. No WAV release artifact is produced.
-
-The standard tape sequence remains BASIC loader, full 6912-byte loading SCREEN$, game CODE, then entry at 32768.
+`tools/package_release.py dist/zx-carrom.zip` makes the deterministic source-plus-release archive and excludes TAP files. No WAV release artifact is produced.
 
 The fast TZX is deliberately fixed and small. It contains exactly four blocks:
 
@@ -94,7 +91,7 @@ Four robot players operate autonomously; RED is North/South and BLUE is East/Wes
 
 ## Memory map
 
-The main program starts at `$8000`. Board pixels use `$E000-$F7FF`, board attributes `$F800-$FAFF`, the IM2 jump/vector area is `$FDFD/$FE00`, and the game stack is below `$FDF0`. The standard TAP still uses `CLEAR 32767` and `RANDOMIZE USR 32768`. The fast TZX instead auto-runs the resident bootstrap at 23784, copies the timing-critical decoder to `$FB00`, and puts its post-game reset stub at `$7F00`. The decoder is no longer needed once the game has started.
+The main program starts at `$8000`. Board pixels use `$E000-$F7FF`, board attributes `$F800-$FAFF`, the IM2 jump/vector area is `$FDFD/$FE00`, and the game stack is below `$FDF0`. The TZX auto-runs the resident bootstrap at 23784, copies the timing-critical decoder to `$FB00`, and puts its post-game reset stub at `$7F00`. The decoder is no longer needed once the game has started.
 
 ## Project layout
 
@@ -111,7 +108,7 @@ The main program starts at `$8000`. Board pixels use `$E000-$F7FF`, board attrib
 
 ## Verification status
 
-Acceptance is emulator-based; no real-hardware claim is made. The workflow first requires the exact delivered fast TZX to reach game entry in Fuse both with normal settings and with loader acceleration disabled. The generalized blocks are expanded only for the secondary cycle-level snapshot tool used by the longer deterministic checks.
+Acceptance is emulator-based; no real-hardware claim is made. The workflow first requires the exact delivered TZX to reach game entry in Fuse both with normal settings and with loader acceleration disabled. The generalized blocks are expanded only for the secondary cycle-level snapshot tool used by the longer deterministic checks.
 
 Because the new loader has a fixed two-payload sequence, reaching game entry means the complete final payload and its checksum have already been consumed. The TZX validator also proves that the game block is physically the final tape block.
 

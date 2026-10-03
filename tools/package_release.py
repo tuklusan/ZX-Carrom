@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a byte-reproducible source + accepted-tapes release ZIP."""
+"""Create a byte-reproducible source + accepted TZX release ZIP."""
 from pathlib import Path
 import argparse, os, zipfile
 
@@ -12,6 +12,7 @@ EXCLUDE_FILES={'dist/zx-carrom.zip','dist/SHA256SUMS'}
 def include_path(p: Path):
     rel=p.relative_to(ROOT).as_posix()
     if rel in EXCLUDE_FILES: return False
+    if p.suffix.lower() == '.tap': return False
     if any(part in EXCLUDE_DIRS for part in p.relative_to(ROOT).parts): return False
     if p.suffix in {'.pyc','.wav','.log'}: return False
     return True
@@ -20,7 +21,7 @@ def include_path(p: Path):
 def main():
     ap=argparse.ArgumentParser(); ap.add_argument('output', nargs='?', default='dist/zx-carrom.zip'); a=ap.parse_args()
     out=(ROOT/a.output).resolve() if not Path(a.output).is_absolute() else Path(a.output)
-    required=[ROOT/'dist/carrom.tap',ROOT/'dist/carrom_fast.tzx']
+    required=[ROOT/'dist/carrom_fast.tzx']
     for p in required:
         if not p.exists(): raise SystemExit(f'missing accepted release artifact: {p}')
     files=[p for p in ROOT.rglob('*') if p.is_file() and include_path(p) and p.resolve()!=out]
