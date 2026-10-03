@@ -1,8 +1,7 @@
-; =============================================================================
-; Carrom Arena ZX - game: match flow, ICF rules, the Carrom Engine, HUD
 ; Copyright (c) 2026 Supratim Sanyal of SANYALnet Labs.
 ; Licensed under the SANYALnet Labs Non-Commercial License.
-; =============================================================================
+
+; Carrom Arena ZX - game: match flow, ICF rules, the Carrom Engine, HUD.
 
 PH_NEWBOARD     EQU 0
 PH_THINK0       EQU 1

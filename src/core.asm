@@ -1,3 +1,8 @@
+; Copyright (c) 2026 Supratim Sanyal of SANYALnet Labs.
+; Licensed under the SANYALnet Labs Non-Commercial License.
+
+; Carrom Arena ZX - core: maths, screen, rendering, physics.
+
 ; next pixel row down for DE (screen address)
         MACRO DOWN_DE
         LOCAL dd
@@ -14,12 +19,6 @@
         ld d,a
 dd:
         ENDM
-
-; =============================================================================
-; Carrom Arena ZX - core: maths, screen, rendering, physics
-; Copyright (c) 2026 Supratim Sanyal of SANYALnet Labs.
-; Licensed under the SANYALnet Labs Non-Commercial License.
-; =============================================================================
 
 ; ---------------------------------------------------------------- maths
 ; 446 bytes — Does the sums so the coins can pretend Newton is watching.
