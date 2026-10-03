@@ -99,7 +99,7 @@ This ledger follows `scratch/review-fix-runbook.md` in order. PASS is used only 
 - New defects: the first correct-looking implementation crossed the existing aligned-table memory boundary, shifting `QSQ` and `vars_end` by a page and tripping the production boundary assertion. The repair was reduced and reorganized without weakening that assertion; final addresses returned to the accepted layout (`QSQ=C200`, `code_end=DCE6`, `vars_end=E0FF`, `BGBUF=E100`).
 
 ## Fix group 2C — Two-colour Due recovery
-**Status: IN PROGRESS**
+**Status: PASS**
 
 - Reproduction: confirmed from disk. Due repayment was keyed only to the moving coin colour, so an outstanding Due for the other colour could remain unpaid even when that colour had a pocketed coin available to return.
 - Current WIP repair: the return path has been refactored toward a colour-parameterized `return_colour` routine, called first for the non-moving colour's existing Due and then for the mover colour's striker-forced returns plus Due. `rret[colour]` is currently aliased onto existing scratch bytes to expose physical return counts for later 2D session accounting without allocating new persistent state.
@@ -111,9 +111,15 @@ This ledger follows `scratch/review-fix-runbook.md` in order. PASS is used only 
 - Run 102 stopped in the temporary measurement step because the normalizer had already renamed the generated dot-prefixed failure token, so the exact string replacement missed it. Production was not reached. The disposable measurement now neutralizes the generated failure line by its assertion text instead.
 - Run 103 measurement succeeded and confirmed `QSQ=C300`, `code_end=DDE6`, `vars_end=E1FF`, `BGBUF=E100`; the untouched production build then failed at the same boundary assertion. A zero-byte `pre_qsq` label is temporarily added immediately before the existing alignment so the next measurement can report the exact byte deficit.
 - Run 104 measured `pre_qsq=C213`, proving the current refactor was exactly 19 bytes past the `C200` alignment boundary. The return helper was then repacked by keeping colour on the stack, keeping forced count in C, deferring `left[colour]` update until the scan completes, and using a compact 0/9 body-base reduction. This removes exactly 19 code bytes without changing the production boundary check. Temporary measurement scaffolding is removed; proof remains pending the next workflow.
+- Final evidence: clean-build run 105 passed. Both clean production builds were byte-identical; TZX validation reported ROM pilots 2824/2420, fast leaders 256/256, 855/1710 data pulses, 24831-byte game payload, and no pauses. All Phase-1, 2A, 2B, and 2C focused assembled checks passed, including the controlled old-behaviour fixture in `test_due_recovery.py`. Three cycle-level loads reached PC 32768; runtime four-seat/player flow, controls, points add/return/reset, sound loop, screen checks, and quit-to-BASIC all passed. Vocabulary gate passed. Emulator proof only.
 
 ## Fix group 2D — Session PTS by coin ownership
-**Status: NOT STARTED**
+**Status: IN PROGRESS**
+
+- Affected files: `src/game.asm`, `src/carrom.asm`, `tools/test_session_pts.py`, workflow hook, ledger.
+- Reproduction: current `stats_stroke` reads only mover-relative `rn`, mover-return `rgiven`, and mover pair `rA`; opponent-colour pockets therefore cannot credit the owning pair.
+- Repair in this checkpoint: replace mover-only accounting with a per-colour helper driven by `rret[colour]`; map colour to owning logical pair through `white_pair`; score white and black independently. To preserve the C200 table boundary, the 66-byte helper replaces the old 69-byte routine, a 30-byte two-colour wrapper is placed after the aligned tables, and 31 bytes of provably unreferenced scratch storage are removed.
+- Focused assembled test added for opponent-colour credit, mixed-colour credit, return subtraction by colour, same-stroke pocket/return netting, underflow rejection, colour/pair remapping, bounded-counter overflow signalling, and a controlled old-behaviour fixture. Execution evidence pending workflow.
 
 ## Phase 2 gate
 

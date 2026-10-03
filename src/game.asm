@@ -1655,21 +1655,22 @@ ph_aftergame:
         ld c,PH_NEWMATCH
         jp wait_then
 
-; 69 bytes — Follows coins into and back out of pockets; the abacus is merciless.
-stats_stroke:
-        ld a,(rn)
-        ld b,a
-        ld a,(rgiven)
-        cp b
-        ret z
-        ld c,a
-        ld a,(rA)
+; 66 bytes — Applies one coin colour's net pocket/return delta to its owning pair.
+; A = colour, B = pocketed this stroke. rret[colour] supplies physical returns.
+stats_colour:
         ld e,a
         ld d,0
+        ld hl,rret
+        add hl,de
+        ld c,(hl)
+        ld a,(white_pair)
+        xor e
+        ld e,a
         ld hl,score
         add hl,de
         ld a,c
         cp b
+        ret z
         jr c,.add
         sub b
         ld c,a
