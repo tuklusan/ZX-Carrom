@@ -383,12 +383,12 @@ S_BREAKS:   db " BREAK",0
 S_THINK:    db " THINKS",0
 S_PLACED:   db " AT ",0
 S_STRIKE:   db " SHOOTS",0
-S_BRKFOUL:  db "BREAK FOUL - NEXT",0
+S_BRKFOUL:  db "FOUL - NEXT",0
 S_BRKLOST:  db "3 MISSES - NEXT",0
 S_BRKAGAIN: db "BREAK - AGAIN",0
 S_FOUL:     db "STRIKER FOUL",0
 S_QCOVER:   db "QUEEN: ",0
-S_QPEND:    db "QUEEN - COVER!",0
+S_QPEND:    db "COVER QUEEN!",0
 S_QRET:     db "QUEEN RETURNED",0
 S_POCKETED: db "IN: ",0
 S_OPPCOIN:  db "OPP COIN IN",0
@@ -407,7 +407,7 @@ S_PRESS:    db "PRESS KEY",0
 S_LOADBLANK: db "                ",0
 S_TITLE:    db "SANYALnet Labs  Carrom Arena",0
 S_SND0:     db "SOUND: BOTH",0
-S_SND1:     db "SOUND: EFFECTS",0
+S_SND1:     db "SOUND: FX",0
 S_SND2:     db "SOUND OFF",0
 S_DUE:      db " DUE",0
 S_NODUE:    db "    ",0

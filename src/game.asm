@@ -543,7 +543,7 @@ ph_move:
         ret
 
 ; ---------------------------------------------------------------- the rules (ICF Laws, doubles)
-; 1990 bytes — Applies the Carrom rules, including the queen's impressive paperwork.
+; 2002 bytes — Applies the Carrom rules, including the queen's impressive paperwork.
 
 ph_resolve:
         ld a,(seat)
@@ -905,6 +905,7 @@ ph_resolve:
         add hl,de
         ld (hl),b
         call stats_stroke
+        call c,stats_clear
         ; ---- the message and the turn
         call msg_clear
         ld a,(rS)
@@ -1320,6 +1321,7 @@ pscore: ld e,a
 
 finish_board:
         call stats_stroke
+        push af
         ld a,(rP)
         cp 13
         jr c,1F
@@ -1338,7 +1340,14 @@ finish_board:
         inc (hl)
         ld a,(hl)
         cp 100
-        call nc,stats_clear
+        jr nc,.stats_reset
+        pop af
+        call c,stats_clear
+        jr .stats_done
+.stats_reset:
+        pop af
+        call stats_clear
+.stats_done:
         ld hl,boards_in_game
         inc (hl)
         xor a
@@ -1475,7 +1484,7 @@ ph_aftergame:
         ld c,PH_NEWMATCH
         jp wait_then
 
-; 71 bytes — Follows coins into and back out of pockets; the abacus is merciless.
+; 70 bytes — Follows coins into and back out of pockets; the abacus is merciless.
 stats_stroke:
         ld a,(rn)
         ld b,a
@@ -1524,9 +1533,10 @@ stats_stroke:
         inc (hl)
         ld a,(hl)
         cp 10
-        ret c
-        jp stats_clear
+        ccf
+        ret
 .store: ld (hl),a
+        or a
         ret
 
 ; 14 bytes — Wipes the public counters when one gets too ambitious.
