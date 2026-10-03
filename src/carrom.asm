@@ -184,7 +184,7 @@ main_loop:
 
 
 ; ---------------------------------------------------------------- keys
-; 254 bytes — Reads the keys and turns finger trouble into orderly decisions.
+; 257 bytes — Reads the keys and turns finger trouble into orderly decisions.
 
 read_keys:
         ld c,0
@@ -298,6 +298,7 @@ k_restart:
         ld (robot_drawn+3),a
         xor a
         ld (paused),a
+        call stats_clear
         call new_match
         pop bc
         ret

@@ -3,7 +3,7 @@
 logs every status-line message with its time, and can dump screenshots."""
 import sys, os, argparse
 from skoolkit.snapshot import Snapshot
-from skoolkit.simutils import from_snapshot, T
+from skoolkit.simutils import from_snapshot, T, F, SP, PC
 from skoolkit import CSimulator
 from skoolkit.trace import Tracer
 from PIL import Image
@@ -75,6 +75,7 @@ def main():
     pause_frozen = True
     pause_resumed = False
     restart_seen = False
+    points_seen = [set(), set()]
     loading_band_clean = (
         all((mem[0x5800+r*32+x] & 0x38) == 0x08
             for r in range(3) for x in range(32))
@@ -208,7 +209,9 @@ def main():
                     if mem[0x5800+ar*32+xb] != expected:
                         east_attr_clean = False
         if os.environ.get('HUDTEST') and now_s > 3:
-            mem[sym['score']] = 125; mem[sym['score']+1] = 7; mem[sym['boards_won']] = 12; mem[sym['boards_won']+1] = 3
+            mem[sym['score']] = 25; mem[sym['score']+1] = 7
+            mem[sym['score']+2] = 1; mem[sym['score']+3] = 0
+            mem[sym['boards_won']] = 12; mem[sym['boards_won']+1] = 3
             mem[sym['games_won']] = 10; mem[sym['games_won']+1] = 1; mem[sym['dues']] = 1
         if os.environ.get('QUITTEST') and 8.0 <= now_s < 8.2: kb[2] |= 1      # Q
         if os.environ.get('KEYTEST'):
@@ -239,8 +242,10 @@ def main():
                     pause_frozen = False
             if pause_ref is not None and not mem[sym['paused']] and now_s >= 15.3 and state != pause_ref:
                 pause_resumed = True
+            points_seen[0].add(mem[sym['score']] + 100 * mem[sym['score'] + 2])
+            points_seen[1].add(mem[sym['score'] + 1] + 100 * mem[sym['score'] + 3])
             if 125.2 <= now_s <= 127.0 and mem[sym['phase']] == 8 and mem[sym['timer']] >= 60:
-                if not any(mem[sym[k]] for k in ('games_played', 'boards_in_game')) and not any(mem[sym['score'] + i] for i in range(2)) and not any(mem[sym['boards_won'] + i] for i in range(2)) and not any(mem[sym['games_won'] + i] for i in range(2)):
+                if not any(mem[sym[k]] for k in ('games_played', 'boards_in_game')) and not any(mem[sym['score'] + i] for i in range(4)) and not any(mem[sym['boards_won'] + i] for i in range(2)) and not any(mem[sym['games_won'] + i] for i in range(2)):
                     restart_seen = True
         return True
     import io, contextlib
@@ -257,10 +262,11 @@ def main():
             shots.pop(0)
         if pc == stop:
             text = bytes(mem[sym['msg_buf']:sym['msg_buf'] + 64]).split(b'\0')[0].decode('latin1').rstrip()
-            sc = (mem[sym['score']], mem[sym['score'] + 1])
+            sc = (mem[sym['score']] + 100 * mem[sym['score'] + 2],
+                  mem[sym['score'] + 1] + 100 * mem[sym['score'] + 3])
             left = (mem[sym['left']], mem[sym['left'] + 1])
             msgs.append((now, text))
-            if 'THINKING' in text or 'BREAKS' in text:
+            if 'THINKS' in text or ' BREAK' in text:
                 # every play-area pixel outside the pieces must match the clean board copy
                 rects=[]
                 for i in range(20):
@@ -291,17 +297,50 @@ def main():
                     info+=f" coin@({mem[b+1]}.{mem[b]*100//256},{mem[b+3]}.{mem[b+2]*100//256}) seatuv=({sb(mem[sym['ai_u']+bid])},{sb(mem[sym['ai_v']+bid])})"
                 info+=f" g=({w('fc_gx')/16:.1f},{w('fc_gy')/16:.1f}) s=({w('fc_sx')/16:.1f},{w('fc_sy')/16:.1f})"
                 print(info)
-            if a.accept and ('THINKING' in text or 'BREAKS' in text):
+            if a.accept and ('THINKS' in text or ' BREAK' in text):
                 seats_seen.add(mem[sym['seat']])
                 play_msgs += 1
-            if a.accept and 'STRIKING' in text:
+            if a.accept and 'SHOOTS' in text:
                 strikes += 1
             if a.accept:
-                stray_total += bad if ('THINKING' in text or 'BREAKS' in text) else 0
+                stray_total += bad if ('THINKS' in text or ' BREAK' in text) else 0
             if not a.quiet:
-                print(f"{now:8.1f}s  [{sc[0]:2d}-{sc[1]:2d}] left W{left[0]} B{left[1]} q{mem[sym['qstate']]}  {text}")
+                print(f"{now:8.1f}s  [{sc[0]:3d}-{sc[1]:3d}] left W{left[0]} B{left[1]} q{mem[sym['qstate']]}  {text}")
     screenshot(mem, f"{a.prefix}_end.png")
+    counter_add = counter_return = counter_reset = True
     if a.accept:
+        def call_routine(addr):
+            sentinel = 0x7EFE
+            sp = (regs[SP] - 2) & 0xFFFF
+            mem[sp] = sentinel & 255
+            mem[(sp + 1) & 0xFFFF] = sentinel >> 8
+            regs[SP] = sp
+            tracer.run(addr, sentinel, 0, 50000, False, None, None, None, None, '$', '02X', '04X')
+            return regs[PC] == sentinel
+
+        base = sym['score']
+        for i in range(8):
+            mem[base + i] = 0
+        mem[sym['rA']] = 0
+        mem[sym['rn']] = 2
+        mem[sym['rgiven']] = 0
+        counter_add = call_routine(sym['stats_stroke']) and mem[base] == 2 and mem[base + 2] == 0
+
+        mem[sym['rn']] = 0
+        mem[sym['rgiven']] = 1
+        counter_return = call_routine(sym['stats_stroke']) and mem[base] == 1 and mem[base + 2] == 0
+
+        mem[base] = 99
+        mem[base + 2] = 9
+        mem[sym['boards_won']] = 4
+        mem[sym['games_won']] = 5
+        mem[sym['rn']] = 1
+        mem[sym['rgiven']] = 0
+        overflow_signal = call_routine(sym['stats_stroke']) and bool(regs[F] & 1)
+        if overflow_signal:
+            overflow_signal = call_routine(sym['stats_clear'])
+        counter_reset = overflow_signal and not any(mem[base + i] for i in range(8))
+
         checks = {
             'four seats': seats_seen == {0, 1, 2, 3},
             'turn flow': play_msgs >= 8 and strikes >= 4,
@@ -310,6 +349,10 @@ def main():
             'pause freeze': pause_ref is not None and pause_frozen,
             'pause resume': pause_resumed,
             'restart': restart_seen,
+            'live points': any(len(v) > 1 for v in points_seen),
+            'points add': counter_add,
+            'points return': counter_return,
+            'counter reset': counter_reset,
             'groove active': len(song_positions) >= 20,
             'groove loop': song_wraps >= 1,
             'effects idle': mem[sym['sfx_busy']] == 0,
