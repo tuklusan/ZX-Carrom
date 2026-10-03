@@ -78,6 +78,8 @@ The shared loading picture uses the 4x8 project font for its key legend. On mach
 
 Four robot players operate autonomously; RED is North/South and BLUE is East/West.
 
+The HUD counters are session totals for each pair. PTS rises when that pair pockets its own regular coins and falls again if ICF rules put those coins back on the board. BOARDS and GAMES rise on wins. PTS is limited to 999, BOARDS to 99, and GAMES to 99; if any counter tries to go past its limit, all three public counter sets are cleared to zero. **R** also clears the session counters when it restarts the match.
+
 - **SPACE** — pause/resume
 - **F** — fast/normal play
 - **M** — cycle sound modes (music+effects, effects only, silent)
