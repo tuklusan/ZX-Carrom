@@ -4,7 +4,7 @@
 
 This runbook turns the active findings in `scratch/zx-carrom-adversarial-review-final.md` into three ordered repair phases. Each phase is closed by focused positive tests, focused negative tests, the production build, runtime checks, reproducibility checks, and one clean workflow run. No later phase may begin until the prior phase gate is fully green.
 
-The active review ledger is eight major findings plus two advisories. The withdrawn former MAJOR 5 is not work and must not be reintroduced unless new evidence changes the review.
+The primary review ledger remains eight major findings plus two advisories. A follow-up review adds one additional functional advisory that survives source-level checking: return-placement clearance must be made subpixel-safe. It also identifies several maintenance clarifications that are useful but are not new gameplay defects. The withdrawn former MAJOR 5 is not work and must not be reintroduced unless new evidence changes the review.
 
 ## Global execution rules
 
@@ -24,6 +24,8 @@ The active review ledger is eight major findings plus two advisories. The withdr
 Add or extend deterministic focused checks under `tools/`. The checks must exercise assembled routines or a loaded assembled snapshot, not merely duplicate the intended rules in a separate model. It is acceptable to factor the existing routine-call helper from `tools/sim.py` into reusable test support.
 
 For each finding below, the negative case means an intentionally difficult or invalid input/state that the corrected program must reject or handle safely. The negative case itself passes when the program refuses the bad outcome.
+
+Documentation-only maintenance notes are not defect findings and do not need artificial negative tests. They still require static checks, regeneration checks where applicable, and the full phase regression gate.
 
 ---
 
@@ -208,12 +210,35 @@ Phase 2 may start only after the Phase 1 gate is fully green.
 - A coin that is returned in the same resolution must not remain counted as permanently pocketed.
 - Score subtraction must not underflow into a large displayed value.
 
+## Rule-resolution guardrail — striker combinations
+
+The follow-up review questioned the existing Due behavior for proper strokes involving the striker. Rules 72(a), 73, 74, and 75 do not support those proposed changes, so preserve these cases explicitly in the Phase 2 resolver matrix:
+
+- Striker alone: return one of the mover's coins as Due when available; the turn ends.
+- Striker + own coin(s): return the own coin(s) pocketed in that stroke plus one Due coin; the turn continues.
+- Striker + opponent coin(s): opponent coin(s) remain pocketed; return one mover-colour Due coin when available; the turn ends.
+- Striker + own coin(s) + opponent coin(s): return the own coin(s) from that stroke plus one Due coin; opponent coin(s) remain pocketed; the turn continues.
+- Add Queen combinations on top of those cases according to the Queen rules already exercised by group 2B, including Rule 98(a) for Queen + own coin(s) + striker.
+
+### Positive tests
+
+- Exercise each of the four proper-stroke combinations above with no pre-existing Due and verify returned bodies, retained bodies, `dues[]`, `left[]`, and continuation state.
+- Repeat each case with an already-outstanding Due and verify obligations accumulate/recover without changing which opponent-colour coins remain pocketed.
+- Verify group 2D public counters follow the final retained/returned body state for both colours.
+
+### Negative tests
+
+- Do not suppress the Due merely because an own or opponent coin accompanied the striker.
+- Do not return an opponent-colour coin merely because it accompanied the striker.
+- Do not let the mover continue after striker + opponent-only, and do not end the mover's turn after striker + own coin(s) when no separate rule requires it.
+
 ## Phase 2 gate — mandatory before Phase 3
 
 Phase 2 is green only when all of the following are true:
 
 - Every focused positive and negative check for 2A through 2D passes against the assembled program.
-- At least one test for each group is shown to catch the pre-fix behavior or an equivalent controlled defect fixture.
+- Every striker-combination guardrail row and its positive/negative checks pass.
+- At least one test for each functional fix group is shown to catch the pre-fix behavior or an equivalent controlled defect fixture.
 - A combined resolver matrix covers simultaneous Queen, striker, own-colour, opponent-colour, existing-Due, and return combinations used by these fixes, with invariants checked after every case: `0 <= left[colour] <= 9`, no duplicate on-board body, returned-body colour is correct, Due counts are non-negative, and score deltas agree with retained pocketed bodies.
 - `python3 build.py`, deterministic tape validation, runtime acceptance, and quit-to-BASIC all pass.
 - Live play demonstrates changing PTS when coins are pocketed and correct PTS decreases when coins are returned.
@@ -224,7 +249,7 @@ Phase 2 is green only when all of the following are true:
 
 ---
 
-# Phase 3 — Remove unsafe fallback and harden production guards
+# Phase 3 — Remove unsafe fallback and harden geometry/production guards
 
 Phase 3 may start only after the Phase 2 gate is fully green.
 
@@ -291,12 +316,52 @@ Phase 3 may start only after the Phase 2 gate is fully green.
 - Deliberately set equality at the forbidden boundary and verify it also fails if the invariant remains strict `<`.
 - Restore the source and rerun the clean build; no negative-test mutation may remain tracked.
 
+## Fix group 3D — Subpixel-safe returned-coin placement
+
+**Finding:** follow-up ADVISORY — `spot_free` decides clearance from integer high-byte coordinates and a squared threshold of 73. Because an existing 8.8 coordinate may lie almost one pixel closer than its stored high byte suggests on an axis, some integer offsets accepted by the current test can still represent centre distances below the eight-pixel touching distance for two radius-four coins. Simply changing 73 to 64 would loosen the test and is not an acceptable fix.
+
+### Change
+
+- Make `spot_free` prove non-overlap against the actual 8.8 body centre, or use a mathematically conservative integer bound whose safety is demonstrated for every sign/fraction combination.
+- Keep the rule-specific placement search order unchanged unless a separate requirement says otherwise.
+- Tighten only the geometric legality test. Do not silently change obligation bookkeeping in this group; separately verify that a failed placement is never counted as a body physically returned.
+
+### Positive tests
+
+- Sweep candidate return points around an on-board radius-four coin over all relevant integer offsets and representative fractional body positions; every accepted placement must have true centre distance at least eight pixels.
+- Include exact tangent placements and verify they are accepted when the chosen arithmetic represents them exactly.
+- Verify ordinary Due/Queen return searches still find legal positions on representative crowded boards.
+
+### Negative tests
+
+- Construct fractional positions whose high-byte deltas are `(8,3)`, `(7,5)`, and `(7,6)` from the candidate; reject any case whose true 8.8 centre distance is below eight pixels.
+- Prove that replacing the current threshold with 64 alone fails at least one focused overlap case, so the regression test catches the tempting but incorrect simplification.
+- A rejected candidate must not increment `left[]`, clear a Due, or mark any body on-board.
+
+## Phase 3 maintenance notes — non-defect hardening
+
+Fold these in only while the affected files are already being changed. They are clarity/cleanup items, not new gameplay findings:
+
+- Remove the dead `ld a,l` in `recompute`; it has no consumer and changes no flags. Re-run focused velocity/friction arithmetic checks after the address shift.
+- Document that `ai_begin` intentionally builds planner occupancy/coordinates for body ids 0..18 and excludes the striker at id 19; keep consumer loops consistent with that contract rather than extending the loop blindly.
+- Document the `music_play` caller contract: blocking songs are entered from normal interruptible game flow, `nb_play` disables interrupts internally, and the wrapper restores the game's interrupt-enabled state on return.
+- Document the interrupt-player register contract that the current `gm_tick` path does not touch `IX`/`IY`; if a future change uses either register, the interrupt wrapper must preserve it.
+- Document in the music generator that the title sequence intentionally falls through from intro patterns into the loop sequence on first play, while the stored loop pointer restarts at the later pattern on repetition. Regeneration must preserve that topology.
+
+### Maintenance checks
+
+- Static inspection confirms planner consumers still stop before striker id 19.
+- Regenerating music in a disposable clean copy preserves the intended intro-then-loop sequence and does not introduce an extra early terminator.
+- Runtime title/result music and live interrupt music still pass the existing sound/control acceptance checks.
+- The removed dead instruction does not change recomputed speed/friction results for the existing exhaustive or heavy-sampled arithmetic corpus.
+
 ## Phase 3 and final acceptance gate
 
 Phase 3 is complete only when all of the following are true:
 
-- Every focused positive and negative check for 3A through 3C passes against the assembled program/build path.
-- At least one test for each group is shown to catch the pre-fix behavior or an equivalent controlled defect fixture.
+- Every focused positive and negative check for 3A through 3D passes against the assembled program/build path.
+- All Phase 3 maintenance checks pass.
+- At least one test for each functional fix group is shown to catch the pre-fix behavior or an equivalent controlled defect fixture.
 - All focused tests from Phases 1 and 2 are rerun and remain green; no phase may rely only on its newest tests.
 - `python3 build.py` creates fresh release outputs with Pasmo.
 - Independent TZX parsing proves ROM bootstrap pilot counts of 2824 then 2420 pulses, a total fast leader of 256 pulses at 1710 T-states even when the leader spans multiple `0x13` pulse blocks, turbo data timing of 855/1710 T-states, no explicit pause blocks, every block pause equal to 0 ms, turbo SCREEN$ payload before the turbo game payload, load addresses, entry point, framing, and integrity fields.
