@@ -56,6 +56,7 @@ BSZ     EQU 24
 F_ON    EQU 1
 F_MOV   EQU 2
 
+; 280 bytes — Boots the machine, starts the loop, and tries not to spill the tea.
 start:
         di
         ld hl,vars_start
@@ -183,6 +184,7 @@ main_loop:
 
 
 ; ---------------------------------------------------------------- keys
+; 254 bytes — Reads the keys and turns finger trouble into orderly decisions.
 
 read_keys:
         ld c,0
@@ -322,6 +324,7 @@ k_quit:
         INCLUDE "nanobeep.asm"
 
 ; HL = song, A = 1 to stop on a key.  nanobeep-derived player is blocking.
+; 63 bytes — Plays blocking jingles, unpacks bytes, and waits for fingers to leave.
 music_play:
         ld (nb_keyexit),a
         ld a,(music_off)

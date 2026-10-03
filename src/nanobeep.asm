@@ -18,6 +18,7 @@
 ; Pattern rows are two frequency increment bytes, terminated by $FF.
 ; =============================================================================
 
+; 112 bytes — Plays the little beeper tunes, because silence was getting smug.
 nb_play:
         di
         ld e,(hl)

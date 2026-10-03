@@ -7,6 +7,7 @@ DECODER_DEST  EQU 0xFB00
 DECODER_BYTES EQU 512
 RETURN_STUB   EQU 0x7F00
 
+; 29 bytes — Copies the decoder and return stub into place, then gets out of the way.
 bootstrap_start:
         di
         ld sp,0x7FF0
@@ -23,6 +24,7 @@ bootstrap_start:
 
         jp DECODER_DEST
 
+; 3 bytes — Tiny return trampoline; three bytes, one job, no drama.
 reset_stub:
         jp 0
 reset_stub_end:

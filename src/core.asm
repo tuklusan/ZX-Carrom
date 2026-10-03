@@ -22,6 +22,7 @@ dd:
 ; =============================================================================
 
 ; ---------------------------------------------------------------- maths
+; 446 bytes — Does the sums so the coins can pretend Newton is watching.
 
 ; HL = -HL (preserves BC, DE)
 neghl:
@@ -356,6 +357,7 @@ rand_n:
         jr 1B
 
 ; ---------------------------------------------------------------- screen
+; 93 bytes — Finds screen rows, restores the board, and flips individual pixels.
 
 ; DE = screen address of pixel row C, byte column 0
 row_de:
@@ -418,6 +420,7 @@ plot_xor:
 BITMASK: db 128,64,32,16,8,4,2,1
 
 ; ---------------------------------------------------------------- moving space backdrop
+; 555 bytes — Moves the starfield and draws masked sprites without denting the furniture.
 ; Outer side strips stream away from the board.  Near/mid/far layers move at
 ; different frame rates.  Clustered points in the far and mid sets form tiny
 ; spiral-like galaxies that travel with their layer.
@@ -751,6 +754,7 @@ SPRTAB:
         db 3,10,60,0,0,0
 
 ; ---------------------------------------------------------------- text
+; 65 bytes — Prints ordinary text one character at a time, very 1982.
 
 ; print 0-terminated string HL at B=row C=col
 print_at:
@@ -807,6 +811,7 @@ put_char:
         ret
 
 ; ---------------------------------------------------------------- 64-column text
+; 606 bytes — Squeezes tiny text into half-width cells and keeps the title tidy.
 ; Glyphs are 4x8 (FONT64, glyph in the high nibble).  Columns are half-cells 0-63.
 
 ; HL = screen address of text row B, half-column C; carry set if C is odd
@@ -1147,6 +1152,7 @@ msg_pair:
 SEATCH: db "NESW"
 
 ; ---------------------------------------------------------------- rendering of the pieces
+; 397 bytes — Erases and redraws the pieces before anyone notices the trick.
 
 render:
         xor a
@@ -1372,6 +1378,7 @@ draw_fast:
 SPRBASES: dw SPR_WHITE,SPR_BLACK,SPR_QUEEN,SPR_STRIKER
 
 ; ---------------------------------------------------------------- robots
+; 325 bytes — Draws the four robot seats; no tiny union cards required.
 
 ; robot_pos[s] is the centre of each figure along its side; redraw on change
 draw_robots:
@@ -1571,6 +1578,7 @@ draw_vrobot:
         ret
 
 ; ---------------------------------------------------------------- sound effects
+; 160 bytes — Makes short beeps and thumps while leaving the game state alone.
 ; Short 1-bit effects built around the same phase-accumulator technique used by
 ; utz nanobeep (tuklusan/ZX-Spectrum-1-Bit-Routines) with noise accents in the
 ; spirit of the repository's later FX engines.  Border stays black: port $FE
@@ -1687,6 +1695,7 @@ snd_flick_b:
         jp sfx_phase_burst
 
 ; ---------------------------------------------------------------- physics
+; 1868 bytes — Moves, bounces, pockets, and collides everything that refuses to sit still.
 ;
 ; Positions are 8.8 screen pixels; velocities are 1/2048 px per tick.
 ; Board friction is dry Coulomb sliding: each moving body loses a constant ACC of

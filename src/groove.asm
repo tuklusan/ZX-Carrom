@@ -8,6 +8,7 @@
 ; Song data (GM_SONG, GM_PATn, GM_NOTES, GM_STEPF) comes from music.py.
 ; =============================================================================
 
+; 343 bytes — Keeps the live groove ticking while the robots get on with the match.
 isr:
         push af
         push hl

@@ -9,6 +9,7 @@ PILOT_MIN   EQU 20
 SYNC_MIN    EQU 3
 BIT_SPLIT   EQU 20
 
+; 35 bytes — Loads screen then game and leaves a safe road back to BASIC.
 loader_start:
         di
         ld hl,0x4000
@@ -26,6 +27,7 @@ loader_start:
         push hl
         jp 0x8000
 
+; 8 bytes — Paints an error border and retreats to BASIC with dignity.
 load_error:
         ld a,2
         out (0xFE),a
@@ -34,6 +36,7 @@ load_error:
 
 ; HL destination, IX payload byte count.
 ; Reads one fixed fast block, then verifies two rolling checksum bytes.
+; 122 bytes — Finds the leader, reads a block, and checks both rolling sums.
 load_block:
         xor a
         ld (sum1),a
@@ -121,6 +124,7 @@ block_fail:
         ret
 
 ; Return one byte in A. Bits arrive MSB first.
+; 22 bytes — Rebuilds one byte from eight turbo edge intervals.
 read_byte:
         ld e,0
         ld d,8
@@ -141,6 +145,7 @@ read_fail:
 
 ; C holds the last EAR level. Return interval count in A.
 ; Carry means no edge arrived before timeout.
+; 21 bytes — Times one EAR edge and gives up cleanly if the tape sulks.
 wait_edge:
         ld b,0
 edge_loop:

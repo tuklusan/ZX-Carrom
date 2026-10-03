@@ -25,6 +25,7 @@ QA_RET  EQU 3
 AIM_K0  EQU 7
 VB_HALF EQU -33         ; baseline in seat frame, half pixels
 
+; 40 bytes — Dispatches each frame to the right phase with minimal ceremony.
 run_phase:
         ld a,(phase)
         add a,a
@@ -41,6 +42,7 @@ PHTAB:  dw ph_newboard,ph_think0,ph_think,ph_place,ph_hold,ph_aim,ph_move
         dw ph_resolve,ph_wait,ph_afterboard,ph_aftergame,ph_newmatch
 
 ; ---------------------------------------------------------------- match / game / board
+; 360 bytes — Starts matches, boards, and turns without asking for a committee.
 
 new_match:
         xor a
@@ -217,6 +219,7 @@ pair_colour:            ; A = pair -> A = colour
         ret
 
 ; ---------------------------------------------------------------- thinking
+; 622 bytes — Places, aims, and animates a shot while the robots look thoughtful.
 
 ph_think0:
         ld ix,BODIES+STRIKER*BSZ
@@ -543,6 +546,7 @@ ph_move:
         ret
 
 ; ---------------------------------------------------------------- the rules (ICF Laws, doubles)
+; 1872 bytes — Applies the Carrom rules, including the queen's impressive paperwork.
 
 ph_resolve:
         ld a,(seat)
@@ -1459,6 +1463,7 @@ ph_aftergame:
         jp wait_then
 
 ; ---------------------------------------------------------------- HUD
+; 379 bytes — Keeps scores and status readable while the coins cause trouble.
 ; Each corner is 6 character cells = 12 columns of the 64-column font:
 ;   row 1   RED (o)x9 DUE       name, coin colour, coins left, dues owed
 ;   row 2   PTS 125 (Q)         points this game (3 digits), queen covered
@@ -1657,6 +1662,7 @@ msg_profile:
         jp msg_s
 
 ; ---------------------------------------------------------------- the Carrom Engine
+; 2499 bytes — Chooses robot shots, scores options, and converts intent into velocity.
 ;
 ; Candidate generation (ghost-coin aiming at each pocket for every legal target), a cheap
 ; geometric check of both paths, then utility scoring with a per-seat weighting profile:
