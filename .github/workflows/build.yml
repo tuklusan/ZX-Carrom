@@ -54,8 +54,10 @@ jobs:
           from pathlib import Path
           p = Path('/tmp/carrom_diag.asm')
           s = p.read_text()
-          s = s.replace('    .ERROR assertion failed: vars_end < BGBUF',
-                        '    ; boundary measurement only')
+          s = '\n'.join(
+              '; boundary measurement only' if 'assertion failed: vars_end < BGBUF' in line else line
+              for line in s.splitlines()
+          ) + '\n'
           p.write_text(s)
           PY
           /tmp/pasmo/pasmo --bin --pass3 /tmp/carrom_diag.asm /tmp/carrom_diag.bin /tmp/carrom_diag.sym
