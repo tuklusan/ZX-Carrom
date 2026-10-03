@@ -88,7 +88,7 @@ jobs:
 
       - name: Verify clean source state
         run: |
-          git diff --exit-code -- . ':(exclude)dist/carrom_fast.tzx' ':(exclude)dist/zx-carrom.zip' ':(exclude)dist/SHA256SUMS'
+          git diff --exit-code -- . ':(exclude)dist/carrom_fast.tzx' ':(exclude)dist/zx-carrom.zip' ':(exclude)dist/CHECKSUMS'
 
       - name: Round-trip and commit accepted deliverables
         run: |
@@ -99,10 +99,10 @@ jobs:
             cmp "dist/$f" "/tmp/release64/$f"
             mv "/tmp/release64/$f" "dist/$f"
           done
-          sha256sum -c dist/SHA256SUMS
+          sha256sum -c dist/CHECKSUMS
           git config user.name "zx-carrom-release"
           git config user.email "zx-carrom-release@users.noreply.github.com"
-          git add -f dist/carrom_fast.tzx dist/zx-carrom.zip dist/SHA256SUMS
+          git add -f dist/carrom_fast.tzx dist/zx-carrom.zip dist/CHECKSUMS
           if ! git diff --cached --quiet; then
             git commit -m "Store accepted release outputs"
             git push origin HEAD:main
@@ -115,7 +115,7 @@ jobs:
           path: |
             dist/carrom_fast.tzx
             dist/zx-carrom.zip
-            dist/SHA256SUMS
+            dist/CHECKSUMS
           if-no-files-found: error
 
       - name: Upload runtime view
