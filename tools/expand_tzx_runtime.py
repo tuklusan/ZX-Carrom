@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Expand generalized TZX blocks to pulse blocks for runtime tools that lack 0x19 support."""
-import struct, sys
+import shutil, struct, subprocess, sys
 
 def u16(b,o): return struct.unpack_from('<H',b,o)[0]
 def u24(b,o): return int.from_bytes(b[o:o+3],'little')
@@ -58,6 +58,41 @@ def emit(out,pulses):
         chunk=pulses[i:i+255]
         out += bytes([0x13,len(chunk)]) + b''.join(struct.pack('<H',x) for x in chunk)
 
+def check_fuse(src):
+    fuse=shutil.which('fuse')
+    xvfb=shutil.which('xvfb-run')
+    if not fuse or not xvfb:
+        print('Fuse exact-tape check skipped: program not installed')
+        return
+    dbg='\n'.join([
+        'delete',
+        'breakpoint 32768',
+        'commands 1',
+        'print 424242',
+        'print PC',
+        'exit 0',
+        'end',
+        'continue',
+    ])
+    modes=(('default',()),('no-loader-shortcut',('--no-accelerate-loader',)))
+    for name,extra in modes:
+        cmd=[xvfb,'-a',fuse,'--machine','48','--no-sound','--no-loading-sound',
+             '--no-autosave-settings','--no-confirm-actions',*extra,
+             '--debugger-command',dbg,src]
+        try:
+            p=subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
+                             text=True,timeout=90)
+        except subprocess.TimeoutExpired as e:
+            out=e.stdout or ''
+            print(out if isinstance(out,str) else out.decode(errors='replace'))
+            raise SystemExit(f'Fuse exact-tape check timed out in {name} mode')
+        print(p.stdout,end='')
+        if p.returncode != 0:
+            raise SystemExit(f'Fuse exact-tape check failed in {name} mode: exit {p.returncode}')
+        if '424242' not in p.stdout:
+            raise SystemExit(f'Fuse exact-tape check did not reach 32768 in {name} mode')
+        print(f'Fuse exact-tape check: {name} mode reached 32768')
+
 def convert(src,dst):
     d=open(src,'rb').read()
     if d[:8] != b'ZXTape!\x1a': raise SystemExit('bad TZX header')
@@ -77,4 +112,5 @@ def convert(src,dst):
 
 if __name__ == '__main__':
     if len(sys.argv) != 3: raise SystemExit('usage: expand_tzx_runtime.py IN OUT')
+    check_fuse(sys.argv[1])
     convert(sys.argv[1],sys.argv[2])
