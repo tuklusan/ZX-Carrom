@@ -65,7 +65,7 @@ Each fast payload carries two rolling checksum bytes. During payload transfer th
 
 ## Audio
 
-The audio authority is `https://github.com/tuklusan/ZX-Spectrum-1-Bit-Routines`. The bundled provenance and BSD-style upstream licence are under `vendor/ZX-Spectrum-1-Bit-Routines/`.
+The audio authority is `https://github.com/tuklusan/ZX-Spectrum-1-Bit-Routines`. The bundled upstream reference snapshot and BSD-style licence are under `vendor/ZX-Spectrum-1-Bit-Routines/`; `nanobeep/main.asm` is retained as the reference used for the adaptation.
 
 - Title/result music uses a callable nanobeep-family player derived from the utz/irrlicht-project routines.
 - Live game music uses an interrupt-safe 50 Hz phase-accumulator design so play continues while music runs.
@@ -95,7 +95,7 @@ The main program starts at `$8000`. Board pixels use `$E000-$F7FF`, board attrib
 - `loader/turbo_loader.asm` — production fixed-sequence decoder, executed from uncontended high RAM.
 - `loader/ZQLOADER_LICENSE.txt` — retained loader attribution and licence notice.
 - `tools/` — current screen/TZX builders, validators, simulator, Pasmo preparation, and deterministic packager.
-- `vendor/ZX-Spectrum-1-Bit-Routines/` — upstream audio reference, provenance, and licence.
+- `vendor/ZX-Spectrum-1-Bit-Routines/` — upstream audio reference snapshot and licence.
 - `build/` — disposable build products, never shipped.
 - `dist/` — accepted TZX, release ZIP, and hashes.
 
@@ -111,4 +111,4 @@ The run-time harness exercises all four robot seats, turn progression, repeated 
 
 Carrom Arena © 2026 Supratim Sanyal of SANYALnet Labs, under the SANYALnet Labs Non-Commercial License used by the original project.
 
-The 1-bit audio work derives techniques/code from the utz/irrlicht-project `ZX-Spectrum-1-Bit-Routines` collection; see the bundled upstream licence and `PROVENANCE.md`. ZQLoader attribution and its MIT licence are retained in `loader/ZQLOADER_LICENSE.txt`; production uses the fixed loader sources in `loader/`.
+The 1-bit audio work derives techniques/code from the utz/irrlicht-project `ZX-Spectrum-1-Bit-Routines` collection; see the bundled upstream licence and reference snapshot. ZQLoader attribution and its MIT licence are retained in `loader/ZQLOADER_LICENSE.txt`; production uses the fixed loader sources in `loader/`.
