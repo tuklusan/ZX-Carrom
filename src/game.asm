@@ -1328,7 +1328,7 @@ finish_board:
         ld a,(rW)
         ld e,a
         ld d,0
-        ld hl,score
+        ld hl,game_score
         add hl,de
         ld a,(rP)
         add a,(hl)
@@ -1475,7 +1475,7 @@ ph_aftergame:
         ld c,PH_NEWMATCH
         jp wait_then
 
-; Net session points follow coins into and back out of pockets; the abacus is merciless.
+; 71 bytes — Follows coins into and back out of pockets; the abacus is merciless.
 stats_stroke:
         ld a,(rn)
         ld b,a
@@ -1543,7 +1543,7 @@ stats_clear:
 ; 390 bytes — Keeps scores and status readable while the coins cause trouble.
 ; Each corner is 6 character cells = 12 columns of the 64-column font:
 ;   row 1   RED (o)x9 DUE       name, coin colour, coins left, dues owed
-;   row 2   PTS 125 (Q)         points this game (3 digits), queen covered
+;   row 2   PTS 125 (Q)         session points (3 digits), queen covered
 ;   row 21  GAMES  2            games won (2 digits)
 ;   row 22  BOARDS12            boards won (2 digits)
 
