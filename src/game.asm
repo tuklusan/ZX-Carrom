@@ -58,6 +58,8 @@ new_game:
         ld (game_score),a
         ld (game_score+1),a
         ld (boards_in_game),a
+        ld (extra_board),a
+        ld (extra_breaker),a
         ld a,PH_NEWBOARD
         ld (phase),a
         ret
@@ -111,14 +113,24 @@ ph_newboard:
 
 setup_board:
         call reset_board_pixels
-        ; ICF 49: the logical breaker passes in turn, shifted by one for each game played.
-        ; The current seat map then tells us where that player is physically sitting.
+        ; ICF extra board: a tied eighth board gets a fresh logical breaker toss.
+        ; Normal boards keep the ordinary ICF 49 rotation and ignore stale toss data.
+        ld a,(extra_board)
+        or a
+        jr z,.normal_breaker
+        xor a
+        ld (extra_board),a      ; consume the one-shot extra-board selection
+        ld a,(extra_breaker)
+        and 3
+        jr .breaker_ready
+.normal_breaker:
         ld a,(boards_in_game)
         ld hl,games_played
         add a,(hl)
         ld hl,break_off
         add a,(hl)
         and 3
+.breaker_ready:
         ld c,a
         and 1
         ld (white_pair),a       ; the breaker's logical pair plays white (ICF 43)
@@ -829,7 +841,11 @@ ph_resolve:
         jr z,.s3
         ld a,QA_RET
         ld (qa),a
-        ; cont = !all_nine && (right || n>0) && !due_out
+        ; Queen + own coin(s) + striker: all returns are due, and play continues.
+        call n_cont             ; Z returns set only for the no-own-coin case
+        jp nz,.qdone
+.s2_no_own:
+        ; Queen + striker with no own coin keeps the separate restricted case.
         ld a,(rbefore)
         cp 9
         jp z,.qdone
@@ -837,8 +853,7 @@ ph_resolve:
         or a
         jp nz,.qdone
         ld a,(rright)
-        ld hl,rn
-        or (hl)
+        or a
         jp z,.qdone
         ld a,1
         ld (rcont),a
@@ -923,7 +938,8 @@ ph_resolve:
         ld (qcover),a
         xor a
         ld (qpend),a
-10:     ; ---- coins to put back: those a pocketed striker takes out, and the dues
+10:     ; ---- coins to put back: striker-forced own coins and Due for both colours
+        ; Publish the mover's newly incurred Due before any placement can fail.
         ld a,(rcA)
         ld e,a
         ld d,0
@@ -931,91 +947,38 @@ ph_resolve:
         add hl,de
         ld a,(rnewdue)
         add a,(hl)
-        ld (rowe),a
-        ld a,(rS)
-        or a
-        jr z,11F
-        ld a,(rn)
-11:     ld (rforced),a
-        ld hl,rowe
-        add a,(hl)
-        ld b,a                   ; give = forced + owe
-        ld hl,left
-        add hl,de
-        ld a,9
-        sub (hl)                 ; own coins lying in the pockets
-        cp b
-        jr nc,12F
-        ld b,a
-12:     ld a,b
-        ld (rgive),a
+        ld (hl),a
         ld a,(qa)
         cp QA_RET
-        jr nz,13F
+        jr nz,.queen_done
         ld hl,FREESPOTS          ; ICF 93, 94: the queen goes back to the centre
         call find_spot
-        jr c,13F
+        jr nc,.queen_spot
+        ; Impossible placement: keep a nonzero Queen state and replay cleanly.
+        ld a,1
+        ld (qstate),a
+        xor a                    ; PH_NEWBOARD
+        ld (phase),a
+        ret
+.queen_spot:
         ld ix,BODIES+QUEEN*BSZ
         call put_back
         xor a
         ld (qstate),a
         ld (qpend),a
-13:     ld a,(rcA)
-        ld b,a
-        add a,a
-        add a,a
-        add a,a
-        add a,b                  ; first id of this colour
-        ld (rid),a
-        ld b,9
-.give:  push bc
-        ld a,(rgiven)
-        ld hl,rgive
-        cp (hl)
-        jr nc,.gnext
-        ld a,(rid)
-        call body_ptr
-        ld a,(ix+BF)
-        and F_ON
-        jr nz,.gnext
-        ld hl,DUESPOTS           ; ICF 84-89: inside the outer circle, hard to pocket
-        call find_spot
-        jr nc,14F
-        ld hl,FREESPOTS
-        call find_spot
-        jr c,.gnext
-14:     call put_back
+.queen_done:
         ld a,(rcA)
-        ld e,a
-        ld d,0
-        ld hl,left
-        add hl,de
-        inc (hl)
-        ld hl,rgiven
-        inc (hl)
-.gnext: ld hl,rid
-        inc (hl)
-        pop bc
-        djnz .give
-        ; dues still owed
-        ld a,(rforced)
-        ld b,a
-        ld a,(rgiven)
-        sub b
-        jr nc,15F
-        xor a
-15:     ld b,a
-        ld a,(rowe)
-        sub b
-        jr nc,16F
-        xor a
-16:     ld b,a
-        ld a,(rcA)
-        ld e,a
-        ld d,0
-        ld hl,dues
-        add hl,de
-        ld (hl),b
+        xor 1                    ; settle the other colour's old Due first
+        ld c,0
+        call return_colour
+        ld c,0
+        ld a,(rS)
+        or a
+        jr z,11F
+        ld a,(rn)
+        ld c,a                   ; striker forces these mover-colour coins back
+11:     ld a,(rcA)
+        call return_colour       ; mover last leaves rgiven compatible with old accounting
         call stats_stroke
         call c,stats_clear
         ; ---- the message and the turn
@@ -1132,6 +1095,92 @@ turn_end:
         ld a,50
         ld c,PH_THINK0
         jp wait_then
+
+
+; A = coin colour, C = forced returns before Due. Returns that colour only.
+; rret[colour] receives the physical return count for session accounting.
+return_colour:
+        ld (r_b),a
+        ld a,c
+        ld (rforced),a
+        xor a
+        ld (rgiven),a
+        ld a,(r_b)
+        ld e,a
+        ld d,0
+        ld hl,dues
+        add hl,de
+        ld a,(hl)
+        add a,c
+        ld b,a                   ; wanted = forced + Due
+        ld hl,left
+        add hl,de
+        ld a,9
+        sub (hl)                 ; this colour's coins in pockets
+        cp b
+        jr nc,1F
+        ld b,a
+1:      ld a,b
+        ld (rgive),a
+        ld a,(r_b)
+        ld b,a
+        add a,a
+        add a,a
+        add a,a
+        add a,b                  ; first body id of this colour
+        ld (rid),a
+        ld b,9
+.loop:  push bc
+        ld a,(rgiven)
+        ld hl,rgive
+        cp (hl)
+        jr nc,.next
+        ld a,(rid)
+        call body_ptr
+        ld a,(ix+BF)
+        and F_ON
+        jr nz,.next
+        ld hl,DUESPOTS
+        call find_spot
+        jr nc,2F
+        ld hl,FREESPOTS
+        call find_spot
+        jr c,.next
+2:      call put_back
+        ld a,(r_b)
+        ld e,a
+        ld d,0
+        ld hl,left
+        add hl,de
+        inc (hl)
+        ld hl,rgiven
+        inc (hl)
+.next:  ld hl,rid
+        inc (hl)
+        pop bc
+        djnz .loop
+        ld a,(rforced)
+        ld b,a
+        ld a,(rgiven)
+        sub b
+        jr nc,3F
+        xor a
+3:      ld b,a                   ; B = returns that actually pay Due
+        ld a,(r_b)
+        ld e,a
+        ld d,0
+        ld hl,dues
+        add hl,de
+        ld a,(hl)
+        sub b
+        jr nc,4F
+        xor a
+4:      ld (hl),a
+        ld hl,rret
+        add hl,de
+        ld a,(rgiven)
+        ld (hl),a
+        ret
 
 ; IX = body A
 body_ptr:
@@ -1524,6 +1573,12 @@ ph_afterboard:
         ld hl,game_score+1
         cp (hl)
         jr nz,.g
+        ; ICF extra board after a tied eighth board: choose a fresh logical breaker.
+        ld c,4
+        call rand_n
+        ld (extra_breaker),a
+        ld a,1
+        ld (extra_board),a
 .nog:   ld a,PH_NEWBOARD
         ld (phase),a
         ret

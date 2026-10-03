@@ -58,7 +58,7 @@ This ledger follows `scratch/review-fix-runbook.md` in order. PASS is used only 
 
 ## Phase 1 gate
 
-**Status: IN PROGRESS**
+**Status: PASS**
 
 - Current and earlier focused tests: PASS — player mapping, Queen history, and pass replay all passed against the snapshot cold-loaded from the final Phase-1 TZX.
 - Production build: PASS — two sequential `PASMO=/tmp/pasmo-bin/pasmo python3 build.py` runs completed from the same staged tree. Final game payload: 24,829 bytes.
@@ -67,19 +67,44 @@ This ledger follows `scratch/review-fix-runbook.md` in order. PASS is used only 
 - Two clean builds and byte comparison: PASS — `carrom.bin`, `carrom_fast.tzx`, and `zx-carrom.zip` were byte-identical. Build-1 checksums: binary `a1c5bc94ed425b896808837de30b0459ff66bb69799f6d5d83290b4035fbf863`; TZX `8f034d841ddecafb6860c79567b8c07549fc184ab84cb0037105732e631337b5`; ZIP `a88c24bfe3d1f4f031eec69266a1bb99c9d7ffd83112f05cf987fa3202caba28`.
 - Restricted-vocabulary result: PASS — index gate clean; `git diff --cached --check` clean.
 - Runner-state check immediately before checkpoint push: PASS — remote `main` unchanged; 0 queued, 0 running.
-- Checkpoint push: PENDING.
-- Authoritative workflow result: PENDING.
+- Checkpoint push: PASS — Phase 1 checkpoint `0dbc00ca4f6872b963c32ec26e2e6c250f036181` was pushed to `main` after the required zero-runner check.
+- Authoritative workflow result: PASS — clean-build run 98 completed successfully for that checkpoint. It passed the vocabulary gate, authoritative Pasmo build, two clean production builds plus byte comparison, runtime tape/play checks including all three focused Phase-1 checks, checksum recording, clean-source verification, accepted-release round trip, and artifact uploads. The workflow refresh commit advanced `main` to `7df4a3fe24736348de4e2fc6d2f4aa08551480f7`; comparison showed only `dist/CHECKSUMS`, `dist/carrom_fast.tzx`, and `dist/zx-carrom.zip` changed. Post-run state: 0 queued, 0 running.
 
 # Phase 2
 
 ## Fix group 2A — Extra-board breaker selection
-**Status: NOT STARTED**
+**Status: PASS**
+
+- Affected files: `src/carrom.asm`, `src/game.asm`, `tools/test_extra_breaker.py`, `.github/workflows/build.yml`.
+- Reproduction: after a tied eighth board, `ph_afterboard` scheduled another board but `setup_board` still derived the breaker from `boards_in_game + games_played + break_off`; no fresh extra-board toss state existed.
+- Repair summary: added one-shot `extra_board` plus `extra_breaker` state. A tied eighth-board transition draws a fresh logical breaker 0..3; `setup_board` consumes that state only for the extra board, maps the logical player through `player_at_seat`, derives the logical white pair, and leaves normal-board rotation unchanged. `new_game` clears the extra-board state.
+- Positive tests: `tools/test_extra_breaker.py` passed against a fresh TZX-loaded snapshot for injected tosses 0,1,2,3 under mapping `[2,3,0,1]`, with mapped physical seat and logical white pair verified for every toss; the tied eighth-board transition armed a fresh 0..3 selection.
+- Rejection tests: counters were chosen so the old rotation formula disagreed with injected tosses; the toss won. With `extra_board=0`, stale `extra_breaker=3` was ignored and not consumed while ordinary rotation selected the expected breaker.
+- Proof test catches old/bad behavior: the new focused test was run against the preserved Phase-1 snapshot/symbol set and exited 1 because `extra_board`/`extra_breaker` do not exist in the old implementation.
+- Regression checks: Phase-1 player-map, Queen-history, and pass-replay assembled checks all passed on the same fresh snapshot; repository vocabulary gate and `git diff --cached --check` passed.
+- Build/validator/runtime results: production build passed with Pasmo and a 24,831-byte game payload; TZX validation reported four data blocks, ROM pilots 2824/2420, fast leaders 256/256, 855/1710 data pulses, and no pauses. Fresh cycle-level tape loading reached PC 32768 before focused tests. Emulator proof only.
+- New defects: none.
 
 ## Fix group 2B — Queen + own coin + striker continuation
-**Status: NOT STARTED**
+**Status: PASS**
+
+- Affected files: `src/game.asm`, `tools/test_queen_striker.py`, `.github/workflows/build.yml`.
+- Reproduction: the pre-fix Queen+striker branch applied the same `rbefore==9`/Due/right-to-Queen restrictions even when one or more own coins were pocketed with the Queen and striker. Against the preserved Phase-2A snapshot, the new focused test failed at the full-set Queen+own+striker continuation case.
+- Repair summary: split Queen+own-coin+striker from Queen+striker-without-own-coin. The former returns the Queen and own coin(s), applies the Due bookkeeping, and continues; the latter retains the prior restricted continuation rule. Due state is published before placement attempts. A failed Queen placement keeps nonzero Queen state and schedules a clean board replay rather than claiming a successful logical return.
+- Positive tests: `tools/test_queen_striker.py` passed against a freshly cold-loaded snapshot. With `rbefore=9`, Queen+own coin+striker returned Queen and own coin, left one Due owed, and continued. With `rbefore<9` plus a spare pocketed own coin, the forced coin and Due were both returned and play continued.
+- Rejection tests: Queen+striker with no own coin did not inherit continuation. A controlled impossible Queen placement scheduled `PH_NEWBOARD`, left the Queen body off-board with nonzero Queen state, preserved the owed Due, and did not claim the forced coin return succeeded.
+- Proof test catches old/bad behavior: the same focused test was run against the preserved Phase-2A snapshot and symbol set; it exited 1 at `full-set Queen+own+striker did not continue`.
+- Regression checks: Phase-1 mapping/history/pass tests plus the 2A extra-breaker test all passed against the fresh 2B snapshot; `git diff --cached --check` and the repository vocabulary gate passed.
+- Build/validator/runtime results: production build under the authoritative Pasmo binary passed with a 24,831-byte game payload. TZX validation retained four blocks, ROM pilots 2824/2420, 256-pulse fast leaders, 855/1710 data pulses, and zero pauses. Fresh cycle-level tape playback reached PC 32768 before focused checks. Emulator proof only; no real-hardware claim.
+- New defects: the first correct-looking implementation crossed the existing aligned-table memory boundary, shifting `QSQ` and `vars_end` by a page and tripping the production boundary assertion. The repair was reduced and reorganized without weakening that assertion; final addresses returned to the accepted layout (`QSQ=C200`, `code_end=DCE6`, `vars_end=E0FF`, `BGBUF=E100`).
 
 ## Fix group 2C — Two-colour Due recovery
-**Status: NOT STARTED**
+**Status: IN PROGRESS**
+
+- Reproduction: confirmed from disk. Due repayment was keyed only to the moving coin colour, so an outstanding Due for the other colour could remain unpaid even when that colour had a pocketed coin available to return.
+- Current WIP repair: the return path has been refactored toward a colour-parameterized `return_colour` routine, called first for the non-moving colour's existing Due and then for the mover colour's striker-forced returns plus Due. `rret[colour]` is currently aliased onto existing scratch bytes to expose physical return counts for later 2D session accounting without allocating new persistent state.
+- Current gate result: BLOCKED by the unchanged production memory-boundary assertion. `PASMO=/tmp/pasmo-bin/pasmo python3 build.py` exits 1 because `vars_end < BGBUF` is false. A disposable diagnostic copy with only the generated failure directive commented out measured `QSQ=C300`, `code_end=DDE6`, `vars_end=E1FF`, `BGBUF=E100`; the accepted 2B layout was `QSQ=C200`, `code_end=DCE6`, `vars_end=E0FF`, so this first refactor crossed an alignment page and shifted the layout by exactly `0x100`. The production assertion itself was not changed or weakened.
+- Next action: shrink/repack the two-colour return implementation until the normal production build again satisfies the existing boundary assertion, then add the required assembled positive/rejection tests and old/bad-behavior proof.
 
 ## Fix group 2D — Session PTS by coin ownership
 **Status: NOT STARTED**

@@ -76,6 +76,8 @@ jobs:
           /tmp/zxrun/bin/python tools/test_player_mapping.py --snap /tmp/carrom_fast.z80 --sym tools/carrom.sym
           /tmp/zxrun/bin/python tools/test_queen_history.py --snap /tmp/carrom_fast.z80 --sym tools/carrom.sym
           /tmp/zxrun/bin/python tools/test_pass_replay.py --snap /tmp/carrom_fast.z80 --sym tools/carrom.sym
+          /tmp/zxrun/bin/python tools/test_extra_breaker.py --snap /tmp/carrom_fast.z80 --sym tools/carrom.sym
+          /tmp/zxrun/bin/python tools/test_queen_striker.py --snap /tmp/carrom_fast.z80 --sym tools/carrom.sym
           /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_fast.z80 --secs 0 --prefix /tmp/loadscreen --quiet
           /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_fast.z80 --secs 150 --prefix /tmp/live --shots 1,10,30,65,90,120,145 --seed 4660 --accept
           mkdir -p build/runtime-view

@@ -494,6 +494,8 @@ player_at_seat: ds 4            ; logical player occupying each physical seat
 pass_streak:    db 0            ; consecutive turn passes on this board
 white_pair:     db 0            ; logical pair (players 0/2 or 1/3) playing white
 break_off:      db 0
+extra_board:    db 0            ; tied eighth-board replay uses a fresh breaker toss
+extra_breaker:  db 0            ; logical player selected for that extra board
 games_played:   db 0
 boards_in_game: db 0
 score:          ds 4            ; session PTS: low 0-99 for both pairs, then hundreds
@@ -531,6 +533,7 @@ rgiven:         db 0
 rid:            db 0
 rW:             db 0
 rP:             db 0
+rret            EQU rW          ; normal-stroke returned counts by coin colour
 r_ownl:         db 0
 r_oppl:         db 0
 r_a:            db 0
