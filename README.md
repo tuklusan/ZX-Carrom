@@ -30,7 +30,7 @@ The local checks reject restricted vocabulary in the complete staged index and i
 
 ## Delivery rule
 
-Release files live in `dist/` on `main`, not only in temporary job output. A release is complete only when the tracked files in `dist/` match a fresh validated build. Workflow artifacts are convenience copies, not the release itself.
+Release files live in `dist/` on `main`, not only in temporary job output. A release is complete only when the tracked files in `dist/` match a fresh checked build. Workflow copies are just for convenience; the files in `dist/` are the release.
 
 ## Release files
 
@@ -38,7 +38,7 @@ A successful build creates the sole tape release:
 
 - `dist/carrom_fast.tzx` — compact turbo TZX.
 
-`python3 build.py` creates both `dist/carrom_fast.tzx` and the deterministic source-plus-release `dist/zx-carrom.zip`. The ZIP excludes TAP files. No WAV release artifact is produced.
+`python3 build.py` creates both `dist/carrom_fast.tzx` and the reproducible source-and-release `dist/zx-carrom.zip`. The ZIP excludes TAP files. No WAV release file is produced.
 
 The fast TZX is small and has exactly four blocks:
 
@@ -101,7 +101,7 @@ The main program starts at `$8000`. Board pixels use `$E000-$F7FF`, board attrib
 
 ## Verification status
 
-Acceptance is emulator-based; no real-hardware claim is made. The workflow first requires the exact delivered TZX to reach game entry in Fuse both with normal settings and with loader acceleration disabled. The generalized blocks are expanded only for the secondary cycle-level snapshot tool used by the longer deterministic checks.
+Testing is emulator-based; no real-hardware claim is made. The workflow first requires the exact TZX to reach game entry in Fuse both with normal settings and with loader acceleration disabled. The generalized blocks are expanded only for the secondary cycle-level snapshot tool used by the longer checks.
 
 Because the new loader has a fixed two-payload sequence, reaching game entry means the complete final payload and its checksum have already been consumed. The TZX validator also proves that the game block is physically the final tape block.
 
