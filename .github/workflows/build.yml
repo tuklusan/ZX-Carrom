@@ -35,7 +35,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends g++ cmake make git python3 python3-venv
+          sudo apt-get install -y --no-install-recommends g++ cmake make git python3 python3-venv fuse-emulator-gtk spectrum-roms xvfb
           python3 -m venv /tmp/zxrun
           git clone https://github.com/tuklusan/skoolkit.git /tmp/skoolkit
           git -C /tmp/skoolkit checkout "$SKOOLKIT_REF"
