@@ -42,9 +42,9 @@ def index_entries():
         if not record:
             continue
         header, path = record.split(b"\t", 1)
-        mode, sha, stage = header.split()
+        mode, oid, stage = header.split()
         if stage == b"0":
-            yield path, sha.decode("ascii")
+            yield path, oid.decode("ascii")
 
 
 def tree_entries():
@@ -53,13 +53,13 @@ def tree_entries():
         if not record:
             continue
         header, path = record.split(b"\t", 1)
-        mode, kind, sha = header.split()
+        mode, kind, oid = header.split()
         if kind == b"blob":
-            yield path, sha.decode("ascii")
+            yield path, oid.decode("ascii")
 
 
-def blob(sha: str) -> bytes:
-    return run_git("cat-file", "blob", sha)
+def blob(oid: str) -> bytes:
+    return run_git("cat-file", "blob", oid)
 
 
 def scan_bytes(label: bytes, data: bytes) -> int:
@@ -87,9 +87,9 @@ def scan_zip(path: bytes, data: bytes) -> int:
                 failures += scan_bytes(path + b":" + name, z.read(info))
     return failures
 
-def scan_entry(path: bytes, sha: str) -> int:
+def scan_entry(path: bytes, oid: str) -> int:
     failures = scan_bytes(b"<path>", path)
-    data = blob(sha)
+    data = blob(oid)
     ext = Path(path.decode("utf-8", "surrogateescape")).suffix.lower().encode("ascii", "ignore")
     if ext == b".zip":
         failures += scan_zip(path, data)
@@ -99,11 +99,11 @@ def scan_entry(path: bytes, sha: str) -> int:
 
 
 def scan_index() -> int:
-    return sum(scan_entry(path, sha) for path, sha in index_entries())
+    return sum(scan_entry(path, oid) for path, oid in index_entries())
 
 
 def scan_tree() -> int:
-    return sum(scan_entry(path, sha) for path, sha in tree_entries())
+    return sum(scan_entry(path, oid) for path, oid in tree_entries())
 
 
 def scan_message_file(path: str) -> int:
