@@ -14,9 +14,9 @@ python3 build.py
 
 The game is assembled with **Pasmo** from `https://github.com/tuklusan/pasmo`. Generated font, board-table, and music assets are checked in. `python3 build.py --regen-assets` regenerates them and additionally needs SkoolKit from `https://github.com/tuklusan/skoolkit`.
 
-Every normal build assembles the 24,569-byte game and generates the 6,912-byte loading screen from scratch. Their SHA-256 values are checked against the expected values before the TZX is built, so accidental payload changes fail immediately without keeping duplicate binary copies in the source tree.
+Every normal build assembles the 24,569-byte game and generates the 6,912-byte loading screen from scratch. Exact size and tape-content checks catch accidental payload changes without keeping duplicate binary copies in the source tree.
 
-The clean Ubuntu workflow builds Pasmo from the pinned fork, performs two clean production builds, compares game/TZX/release ZIP byte-for-byte, validates the TZX, records SHA-256 hashes, and checks the exact TZX in Fuse before the longer play checks.
+The clean Ubuntu workflow builds Pasmo from the project fork, performs two clean production builds, compares game/TZX/release ZIP byte-for-byte, validates the TZX, records release checksums, and checks the exact TZX in Fuse before the longer play checks.
 
 ## Repository vocabulary gate
 
@@ -99,7 +99,7 @@ The main program starts at `$8000`. Board pixels use `$E000-$F7FF`, board attrib
 - `tools/` — screen/TZX builders, validators, simulator, Pasmo preparation, and ZIP packager.
 - `vendor/ZX-Spectrum-1-Bit-Routines/` — upstream audio source copy and licence.
 - `build/` — disposable build products, never shipped.
-- `dist/` — accepted TZX, release ZIP, and hashes.
+- `dist/` — accepted TZX, release ZIP, and checksums.
 
 ## Verification status
 

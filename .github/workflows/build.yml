@@ -20,8 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      PASMO_REF: ef6d399c770a30fbd8bdaa7272ccc7e2b0bcf0dd
-      SKOOLKIT_REF: 5a46d5066f9ceafee70aa9020de88437971cc714
+      PASMO_BRANCH: main
+      SKOOLKIT_BRANCH: master
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,14 +36,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends g++ cmake make git python3 python3-venv fuse-emulator-gtk spectrum-roms xvfb
           python3 -m venv /tmp/zxrun
-          git clone https://github.com/tuklusan/skoolkit.git /tmp/skoolkit
-          git -C /tmp/skoolkit checkout "$SKOOLKIT_REF"
+          git clone --depth 1 --branch "$SKOOLKIT_BRANCH" https://github.com/tuklusan/skoolkit.git /tmp/skoolkit
           /tmp/zxrun/bin/pip install --disable-pip-version-check /tmp/skoolkit pillow
 
       - name: Build Pasmo from authoritative fork
         run: |
-          git clone https://github.com/tuklusan/pasmo.git /tmp/pasmo
-          git -C /tmp/pasmo checkout "$PASMO_REF"
+          git clone --depth 1 --branch "$PASMO_BRANCH" https://github.com/tuklusan/pasmo.git /tmp/pasmo
           cd /tmp/pasmo
           ./configure
           make -j2
@@ -84,9 +82,9 @@ jobs:
           /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_fast.z80 --secs 25 --prefix /tmp/fast --shots 10,25 --seed 4660
           QUITTEST=1 /tmp/zxrun/bin/python tools/sim.py --snap /tmp/carrom_fast.z80 --secs 12 --prefix /tmp/quit-fast --seed 4660 --quiet --quit-check
 
-      - name: Record SHA-256 hashes
+      - name: Record release checksums
         run: |
-          sha256sum build/carrom.bin build/loading.scr dist/carrom_fast.tzx dist/zx-carrom.zip | tee dist/SHA256SUMS
+          sha256sum build/carrom.bin build/loading.scr dist/carrom_fast.tzx dist/zx-carrom.zip | tee dist/CHECKSUMS
 
       - name: Verify clean source state
         run: |

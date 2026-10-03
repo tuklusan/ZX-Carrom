@@ -1,8 +1,8 @@
-; =============================================================================
+; Copyright (c) 2026 Supratim Sanyal of SANYALnet Labs.
+; Licensed under the SANYALnet Labs Non-Commercial License.
+
 ; Carrom Arena callable 2-channel beeper player.
-;
-; Adapted from nanobeep by utz (ZX-Spectrum-1-Bit-Routines/nanobeep/main.asm).
-; Upstream copyright/license is retained in vendor/ZX-Spectrum-1-Bit-Routines.
+; Based on nanobeep by utz; upstream terms are in vendor/ZX-Spectrum-1-Bit-Routines.
 ;
 ; Changes for Carrom Arena:
 ; - callable with HL = song descriptor;

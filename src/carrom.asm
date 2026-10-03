@@ -1,11 +1,7 @@
-; =============================================================================
-; Carrom Arena ZX
-; A ZX Spectrum 48K machine-code port of Carrom Arena by SANYALnet Labs:
-; four autonomous robots play complete doubles Carrom matches under ICF rules.
-;
 ; Copyright (c) 2026 Supratim Sanyal of SANYALnet Labs.
 ; Licensed under the SANYALnet Labs Non-Commercial License.
-; Based on original work by Supratim Sanyal of SANYALnet Labs.
+
+; Carrom Arena ZX - ZX Spectrum 48K doubles Carrom with four autonomous robots.
 ;
 ; Keys: SPACE pause/resume   F fast/normal   M sound (all/effects/off)   R new match
 ;       Q quit to BASIC

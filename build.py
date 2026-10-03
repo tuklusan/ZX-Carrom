@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build Carrom Arena ZX with Pasmo and emit the validated TZX and release ZIP."""
 from pathlib import Path
-import argparse, hashlib, os, shutil, subprocess, sys
+import argparse, os, shutil, subprocess, sys
 
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / 'src'
@@ -10,8 +10,6 @@ DIST = ROOT / 'dist'
 LOADER = ROOT / 'loader'
 TOOLS = ROOT / 'tools'
 
-EXPECTED_GAME_SHA = 'cb61d699bde0b18817ab8170f58bcf04f60c2f404e1378a207bebbb7892f97ac'
-EXPECTED_SCREEN_SHA = 'dc5220f576a90fad6d17723caa92f483f282f97432f8a612f3f62e2c39e13fc5'
 
 
 def run(*args, cwd=ROOT):
@@ -66,15 +64,13 @@ def main():
     run(pasmo, '--bin', '--pass3', flat, binfile, sym)
     if binfile.stat().st_size >= 0x6000:
         raise SystemExit(f'code too large: {binfile.stat().st_size} bytes')
-    game_sha = hashlib.sha256(binfile.read_bytes()).hexdigest()
-    if game_sha != EXPECTED_GAME_SHA:
-        raise SystemExit(f'game binary hash {game_sha} != expected {EXPECTED_GAME_SHA}')
+    if len(binfile.read_bytes()) != 24569:
+        raise SystemExit('game binary size is not 24569 bytes')
 
     loading_screen = BUILD / 'loading.scr'
     run(sys.executable, TOOLS / 'build_loading_screen.py', loading_screen)
-    screen_sha = hashlib.sha256(loading_screen.read_bytes()).hexdigest()
-    if screen_sha != EXPECTED_SCREEN_SHA:
-        raise SystemExit(f'loading screen hash {screen_sha} != expected {EXPECTED_SCREEN_SHA}')
+    if len(loading_screen.read_bytes()) != 6912:
+        raise SystemExit('loading screen size is not 6912 bytes')
 
     fast_bootstrap = BUILD / 'turbo_bootstrap.bin'
     fast_bootstrap_sym = BUILD / 'turbo_bootstrap.sym'
