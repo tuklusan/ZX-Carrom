@@ -68,8 +68,7 @@ def check_fuse(src):
         'delete',
         'breakpoint 32768',
         'commands 1',
-        'print 424242',
-        'print PC',
+        'print 0x4242',
         'exit 0',
         'end',
         'continue',
@@ -89,7 +88,7 @@ def check_fuse(src):
         print(p.stdout,end='')
         if p.returncode != 0:
             raise SystemExit(f'Fuse exact-tape check failed in {name} mode: exit {p.returncode}')
-        if '424242' not in p.stdout:
+        if '0x4242' not in p.stdout:
             raise SystemExit(f'Fuse exact-tape check did not reach 32768 in {name} mode')
         print(f'Fuse exact-tape check: {name} mode reached 32768')
 
