@@ -36,7 +36,7 @@ load_error:
 
 ; HL destination, IX payload byte count.
 ; Reads one fixed fast block, then verifies two rolling checksum bytes.
-; 122 bytes — Finds the leader, reads a block, and checks both rolling sums.
+; 126 bytes — Finds the leader, checks the sums, and gives the border a tiny disco.
 load_block:
         xor a
         ld (sum1),a
@@ -91,6 +91,8 @@ payload_loop:
         ld a,(sum2)
         add a,e
         ld (sum2),a
+        and 1
+        out (0xFE),a
 
         dec ix
         ld a,ixh
