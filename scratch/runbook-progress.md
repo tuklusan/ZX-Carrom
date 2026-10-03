@@ -114,7 +114,7 @@ This ledger follows `scratch/review-fix-runbook.md` in order. PASS is used only 
 - Final evidence: clean-build run 105 passed. Both clean production builds were byte-identical; TZX validation reported ROM pilots 2824/2420, fast leaders 256/256, 855/1710 data pulses, 24831-byte game payload, and no pauses. All Phase-1, 2A, 2B, and 2C focused assembled checks passed, including the controlled old-behaviour fixture in `test_due_recovery.py`. Three cycle-level loads reached PC 32768; runtime four-seat/player flow, controls, points add/return/reset, sound loop, screen checks, and quit-to-BASIC all passed. Vocabulary gate passed. Emulator proof only.
 
 ## Fix group 2D — Session PTS by coin ownership
-**Status: IN PROGRESS**
+**Status: PASS**
 
 - Affected files: `src/game.asm`, `src/carrom.asm`, `tools/test_session_pts.py`, workflow hook, ledger.
 - Reproduction: current `stats_stroke` reads only mover-relative `rn`, mover-return `rgiven`, and mover pair `rA`; opponent-colour pockets therefore cannot credit the owning pair.
@@ -122,6 +122,14 @@ This ledger follows `scratch/review-fix-runbook.md` in order. PASS is used only 
 - Focused assembled test added for opponent-colour credit, mixed-colour credit, return subtraction by colour, same-stroke pocket/return netting, underflow rejection, colour/pair remapping, bounded-counter overflow signalling, and a controlled old-behaviour fixture. Execution evidence pending workflow.
 - Run 106: both clean builds and every focused assembled check, including `session-PTS`, passed. Runtime acceptance then failed. Investigation found a new dependency-order defect in this checkpoint: `ord_f` is not dead storage; collision code accesses it indirectly as the fourth 20-byte array after `ord_x/ord_y/ord_id`. Removing it corrupted later runtime state. The runtime counter probe also still drove the retired mover-only `rgiven` interface.
 - Repair: restore the full collision-array layout and all other removed scratch fields except the two genuinely retired Due scratch bytes, which are replaced in-place by dedicated `rret[2]` storage. Move the 40-byte two-colour/board-end accounting wrappers into the 64-byte unused tail of the aligned ROWLO page, so code size and variable boundary do not grow. Board-ending accounting explicitly zeroes dedicated return counts before scoring. Update the runtime counter probe to the per-colour interface and add a stale-return board-end rejection case. Status remains IN PROGRESS pending rerun.
+- Final evidence: clean-build run 107 passed. Both production builds and byte comparisons passed with the accepted 24831-byte game payload. `session-PTS` and all earlier focused assembled checks passed; three cycle-level loads reached PC 32768; runtime points changed live and add/return/reset checks passed; sound, controls, four-player flow, screen checks, and quit-to-BASIC passed; TZX timings/pilots/leaders/no-pause validation and vocabulary gate passed. Emulator proof only.
+- Old/bad proof: `test_session_pts.py` replaces only the second-colour tail call in snapshot memory with a return; the opponent-colour credit then disappears, reproducing the old defect while the repaired program passes.
+
+### Phase 2 striker/resolver matrix
+**Status: IN PROGRESS**
+
+- Added assembled matrix coverage for striker alone, striker+own, striker+opponent, and striker+own+opponent, each with zero and one pre-existing mover Due. The cases provide enough previously pocketed mover coins to exercise physical repayment, verify Due accumulation/recovery, returned body colour, opponent retention, continuation/end-turn state, `left[]`, and final two-pair PTS.
+- Added unavailable-Due rejection rows plus a combined Queen+striker+own+opponent+existing-Due row. Every case checks bounds, unique on-board coin centres, and score agreement with retained/returned bodies. Execution evidence pending workflow.
 
 ## Phase 2 gate
 
