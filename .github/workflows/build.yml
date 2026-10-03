@@ -21,7 +21,6 @@ jobs:
     timeout-minutes: 20
     env:
       PASMO_REF: ef6d399c770a30fbd8bdaa7272ccc7e2b0bcf0dd
-      ZQLOADER_REF: ca5913fb563be1903f70aab9e88b0497606769f4
       SKOOLKIT_REF: 5a46d5066f9ceafee70aa9020de88437971cc714
     steps:
       - uses: actions/checkout@v4
@@ -50,35 +49,9 @@ jobs:
           make -j2
           ./pasmo --version || true
 
-      - name: Build ZQLoader host tool
-        run: |
-          git clone https://github.com/tuklusan/zqloader.git /tmp/zqloader
-          git -C /tmp/zqloader checkout "$ZQLOADER_REF"
-          python3 - <<'PYFIX'
-          from pathlib import Path
-          p = Path('/tmp/zqloader/turboblock.h')
-          s = p.read_text()
-          old = '        m_pilot_length = p_duration;\n    }'
-          new = '        m_pilot_length = p_duration;\n        return *this;\n    }'
-          if s.count(old) != 1:
-              raise SystemExit('unexpected ZQLoader SetPilotLength source')
-          p.write_text(s.replace(old, new))
-          q = Path('/tmp/zqloader/main.cpp')
-          t = q.read_text()
-          old2 = '        // zqloader.SetCompressionType(CompressionType::none); // @DEBUG'
-          new2 = '        zqloader.SetCompressionType(CompressionType::none);'
-          if t.count(old2) != 1:
-              raise SystemExit('unexpected ZQLoader compression source')
-          q.write_text(t.replace(old2, new2))
-          PYFIX
-          cmake -S /tmp/zqloader -B /tmp/zqloader-build -DCMAKE_BUILD_TYPE=Release -DCMAKE_DISABLE_FIND_PACKAGE_Qt6=ON
-          cmake --build /tmp/zqloader-build --target zqloader -j2
-          /tmp/zqloader-build/zqloader version || true
-
       - name: Clean production build 1
         env:
           PASMO: /tmp/pasmo/pasmo
-          ZQLOADER: /tmp/zqloader-build/zqloader
         run: |
           python3 build.py
           python3 tools/package_release.py dist/zx-carrom.zip
@@ -88,7 +61,6 @@ jobs:
       - name: Clean production build 2 and reproducibility check
         env:
           PASMO: /tmp/pasmo/pasmo
-          ZQLOADER: /tmp/zqloader-build/zqloader
         run: |
           python3 build.py
           python3 tools/package_release.py dist/zx-carrom.zip
@@ -120,7 +92,7 @@ jobs:
 
       - name: Record SHA-256 hashes
         run: |
-          sha256sum build/carrom.bin dist/carrom.tap dist/carrom_fast.tzx dist/zx-carrom.zip | tee dist/SHA256SUMS
+          sha256sum build/carrom.bin loader/frozen/game.bin loader/frozen/loading.scr dist/carrom.tap dist/carrom_fast.tzx dist/zx-carrom.zip | tee dist/SHA256SUMS
 
       - name: Verify clean source state
         run: |

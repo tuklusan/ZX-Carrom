@@ -1,114 +1,230 @@
 #!/usr/bin/env python3
-"""Independently parse and validate the accepted compact fast TZX."""
+"""Validate the fixed-sequence compact fast TZX."""
 from pathlib import Path
-import argparse, collections, struct
+import argparse
+import struct
 
-ROM_PILOTS = [2824, 2420]
-FAST_LEADER = 256
-FAST_LEADER_PULSE = 1710
+PROG = 23755
+LOADER_ADDR = 23797
+ROM_PILOT = 2168
+ROM_SYNC1 = 667
+ROM_SYNC2 = 735
 ZERO = 855
 ONE = 1710
-BYTE_DELAY = 64
-MAX_SIZE = 131072
+ROM_PILOTS = (512, 512)
+FAST_PILOT = 1710
+FAST_PULSES = 256
+MAX_SIZE = 40000
 
-def u16(d, o): return struct.unpack_from('<H', d, o)[0]
-def u24(d, o): return int.from_bytes(d[o:o+3], 'little')
-def u32(d, o): return struct.unpack_from('<I', d, o)[0]
 
-def parse_gdb(body):
-    if len(body) < 18:
-        raise SystemExit('short generalized-data block')
-    pause = u16(body, 4)
-    totp, npp, asp = u32(body, 6), body[10], body[11] or 256
-    totd, npd, asd = u32(body, 12), body[16], body[17] or 256
-    p = 18
+def u16(data, pos):
+    return struct.unpack_from('<H', data, pos)[0]
+
+
+def u24(data, pos):
+    return int.from_bytes(data[pos:pos + 3], 'little')
+
+
+def u32(data, pos):
+    return struct.unpack_from('<I', data, pos)[0]
+
+
+def xor_ok(data):
+    value = 0
+    for byte in data:
+        value ^= byte
+    return value == 0
+
+
+def rolling_check(data):
+    s1 = 0
+    s2 = 0
+    for value in data:
+        s1 = (s1 + value) & 255
+        s2 = (s2 + s1) & 255
+    return bytes([s1, s2])
+
+
+def parse_11(data, pos):
+    pilot, sync1, sync2, zero, one, count = (
+        u16(data, pos + 2 * i) for i in range(6)
+    )
+    used = data[pos + 12]
+    pause = u16(data, pos + 13)
+    size = u24(data, pos + 15)
+    start = pos + 18
+    end = start + size
+    if end > len(data):
+        raise SystemExit('truncated 0x11 block')
+    return {
+        'pilot': pilot, 'sync1': sync1, 'sync2': sync2,
+        'zero': zero, 'one': one, 'count': count,
+        'used': used, 'pause': pause, 'data': data[start:end],
+    }, end
+
+
+def parse_19(data, pos):
+    size = u32(data, pos)
+    end = pos + 4 + size
+    if end > len(data):
+        raise SystemExit('truncated 0x19 block')
+    body = data[pos + 4:end]
+    if len(body) < 14:
+        raise SystemExit('short 0x19 body')
+
+    pause = u16(body, 0)
+    totp = u32(body, 2)
+    npp = body[6]
+    asp = body[7] or 256
+    totd = u32(body, 8)
+    npd = body[12]
+    asd = body[13] or 256
+    p = 14
+
     psyms = []
     for _ in range(asp if totp else 0):
-        if p + 1 + 2*npp > len(body): raise SystemExit('truncated pilot symbols')
-        vals=[u16(body,p+1+2*k) for k in range(npp)]
-        psyms.append([x for x in vals if x])
-        p += 1 + 2*npp
-    prle=[]
+        flag = body[p]
+        vals = [u16(body, p + 1 + 2 * k) for k in range(npp)]
+        psyms.append((flag, vals))
+        p += 1 + 2 * npp
+
+    prle = []
     for _ in range(totp):
-        if p+3 > len(body): raise SystemExit('truncated pilot sequence')
-        prle.append((body[p],u16(body,p+1))); p += 3
-    dsyms=[]
+        prle.append((body[p], u16(body, p + 1)))
+        p += 3
+
+    dsyms = []
     for _ in range(asd if totd else 0):
-        if p + 1 + 2*npd > len(body): raise SystemExit('truncated data symbols')
-        vals=[u16(body,p+1+2*k) for k in range(npd)]
-        dsyms.append([x for x in vals if x])
-        p += 1 + 2*npd
-    return pause, totd, psyms, prle, dsyms
+        flag = body[p]
+        vals = [u16(body, p + 1 + 2 * k) for k in range(npd)]
+        dsyms.append((flag, vals))
+        p += 1 + 2 * npd
 
-def validate(path):
-    d = Path(path).read_bytes()
-    if len(d) > MAX_SIZE:
-        raise SystemExit(f"{path}: expanded TZX is {len(d)} bytes, limit is {MAX_SIZE}")
-    if d[:8] != b'ZXTape!\x1a' or len(d) < 10:
-        raise SystemExit(f"{path}: bad TZX header")
+    bits = max(1, (asd - 1).bit_length())
+    packed_size = (totd * bits + 7) // 8
+    packed = bytes(body[p:p + packed_size])
+    p += packed_size
+    if p != len(body):
+        raise SystemExit('0x19 body has trailing bytes')
 
-    o=10
-    ids=[]; rom=[]; explicit=[]; pauses=[]; timing=collections.Counter()
-    leaders=[]
-    while o < len(d):
-        bid=d[o]; o+=1; ids.append(bid)
-        if bid == 0x10:
-            pause,n=u16(d,o),u16(d,o+2); pauses.append(pause); o += 4+n
-        elif bid == 0x11:
-            pilot,sync1,sync2,zero,one,count=(u16(d,o+2*i) for i in range(6))
-            used,pause,n=d[o+12],u16(d,o+13),u24(d,o+15)
-            rom.append((pilot,sync1,sync2,zero,one,count,used,pause,n)); pauses.append(pause); o += 18+n
-        elif bid == 0x12:
-            pulse,count=u16(d,o),u16(d,o+2)
-            if pulse == FAST_LEADER_PULSE: leaders.append(count)
-            o += 4
-        elif bid == 0x13:
-            raise SystemExit(f"{path}: expanded pulse-sequence block 0x13 remains")
-        elif bid == 0x14:
-            pause,n=u16(d,o+5),u24(d,o+7); pauses.append(pause); o += 10+n
-        elif bid == 0x15:
-            pause,n=u16(d,o+2),u24(d,o+5); pauses.append(pause); o += 8+n
-        elif bid == 0x19:
-            n=u32(d,o); body=d[o:o+4+n]
-            pause,totd,psyms,prle,dsyms=parse_gdb(body); pauses.append(pause)
-            if not totd:
-                raise SystemExit(f"{path}: timing-only generalized block remains")
-            if len(prle) >= 2:
-                sym,rep=prle[0]
-                if sym < len(psyms) and psyms[sym] and all(x == FAST_LEADER_PULSE for x in psyms[sym]):
-                    leaders.append(rep*len(psyms[sym]))
-            for sym in dsyms:
-                timing.update(sym)
-            o += 4+n
-        elif bid == 0x20:
-            explicit.append(u16(d,o)); o += 2
-        elif bid in (0x21,0x30):
-            n=d[o]; o += 1+n
-        elif bid == 0x22:
-            pass
-        elif bid == 0x32:
-            n=u16(d,o); o += 2+n
-        elif bid == 0x5A:
-            o += 9
-        else:
-            raise SystemExit(f"{path}: unhandled TZX block 0x{bid:02x}")
-        if o > len(d): raise SystemExit(f"{path}: truncated TZX block 0x{bid:02x}")
+    return {
+        'pause': pause, 'totp': totp, 'npp': npp, 'asp': asp,
+        'totd': totd, 'npd': npd, 'asd': asd,
+        'psyms': psyms, 'prle': prle, 'dsyms': dsyms,
+        'packed': packed,
+    }, end
 
-    if len(rom) < 2 or [x[5] for x in rom[:2]] != ROM_PILOTS:
-        raise SystemExit(f"{path}: ROM pilot counts {[x[5] for x in rom]} != {ROM_PILOTS}")
-    if explicit: raise SystemExit(f"{path}: explicit pause block(s) present: {explicit}")
-    if any(pauses): raise SystemExit(f"{path}: nonzero per-block pause(s): {pauses}")
-    if leaders != [FAST_LEADER, FAST_LEADER]:
-        raise SystemExit(f"{path}: fast leaders are {leaders}, expected two blocks of {FAST_LEADER}")
-    for p in (ZERO,ONE,ZERO+BYTE_DELAY,ONE+BYTE_DELAY):
-        if not timing[p]: raise SystemExit(f"{path}: required turbo timing {p} T-states not found")
-    if timing[1140] or timing[2280]:
-        raise SystemExit(f"{path}: legacy slower pulses remain")
-    if 0x19 not in ids:
-        raise SystemExit(f"{path}: compact generalized-data blocks missing")
-    print(f"TZX OK: {len(d)} bytes, pilots {ROM_PILOTS[0]}/{ROM_PILOTS[1]}, fast leaders {leaders}x{FAST_LEADER_PULSE}, turbo {ZERO}/{ONE}, no pauses")
-    print("TZX blocks:", dict(sorted(collections.Counter(ids).items())))
+
+def check_rom(block, pilot_count):
+    got = (
+        block['pilot'], block['sync1'], block['sync2'],
+        block['zero'], block['one'], block['count'],
+        block['used'], block['pause'],
+    )
+    want = (
+        ROM_PILOT, ROM_SYNC1, ROM_SYNC2,
+        ZERO, ONE, pilot_count, 8, 0,
+    )
+    if got != want:
+        raise SystemExit(f'ROM block timing {got} != {want}')
+
+
+def check_fast(block, expected, label):
+    if block['pause'] != 0:
+        raise SystemExit(f'{label}: pause is not zero')
+    if (block['totp'], block['npp'], block['asp']) != (2, 2, 2):
+        raise SystemExit(f'{label}: pilot layout is wrong')
+    if (block['npd'], block['asd']) != (1, 2):
+        raise SystemExit(f'{label}: data layout is wrong')
+    if block['psyms'] != [
+        (0, [FAST_PILOT, FAST_PILOT]),
+        (0, [ROM_SYNC1, ROM_SYNC2]),
+    ]:
+        raise SystemExit(f'{label}: pilot/sync symbols are wrong')
+    if block['prle'] != [(0, FAST_PULSES // 2), (1, 1)]:
+        raise SystemExit(f'{label}: fast leader is wrong')
+    if block['dsyms'] != [(0, [ZERO]), (0, [ONE])]:
+        raise SystemExit(f'{label}: data timings are wrong')
+
+    packed = expected + rolling_check(expected)
+    if block['totd'] != len(packed) * 8:
+        raise SystemExit(f'{label}: symbol count is wrong')
+    if block['packed'] != packed:
+        raise SystemExit(f'{label}: payload/checksum mismatch')
+
 
 def main():
-    ap=argparse.ArgumentParser(); ap.add_argument('tzx'); a=ap.parse_args(); validate(a.tzx)
-if __name__=='__main__': main()
+    ap = argparse.ArgumentParser()
+    ap.add_argument('tzx')
+    ap.add_argument('--loader', required=True)
+    ap.add_argument('--screen', required=True)
+    ap.add_argument('--game', required=True)
+    a = ap.parse_args()
+
+    data = Path(a.tzx).read_bytes()
+    loader = Path(a.loader).read_bytes()
+    screen = Path(a.screen).read_bytes()
+    game = Path(a.game).read_bytes()
+
+    if len(data) > MAX_SIZE:
+        raise SystemExit(f'TZX is {len(data)} bytes, limit is {MAX_SIZE}')
+    if data[:8] != b'ZXTape!\x1a' or data[8:10] != bytes([1, 20]):
+        raise SystemExit('bad TZX header/version')
+
+    pos = 10
+    ids = []
+    parsed = []
+    while pos < len(data):
+        block_id = data[pos]
+        ids.append(block_id)
+        pos += 1
+        if block_id == 0x11:
+            block, pos = parse_11(data, pos)
+        elif block_id == 0x19:
+            block, pos = parse_19(data, pos)
+        else:
+            raise SystemExit(f'unexpected TZX block 0x{block_id:02X}')
+        parsed.append(block)
+
+    if pos != len(data):
+        raise SystemExit('trailing bytes after final block')
+    if ids != [0x11, 0x11, 0x19, 0x19]:
+        raise SystemExit(f'block sequence is {ids}')
+
+    check_rom(parsed[0], ROM_PILOTS[0])
+    check_rom(parsed[1], ROM_PILOTS[1])
+
+    hdr = parsed[0]['data']
+    basic = parsed[1]['data']
+    if len(hdr) != 19 or hdr[0] != 0 or not xor_ok(hdr):
+        raise SystemExit('bad BASIC header record')
+    if hdr[1] != 0 or hdr[2:12] != b'CarromZX  ':
+        raise SystemExit('bad BASIC header fields')
+    basic_len = u16(hdr, 12)
+    autorun = u16(hdr, 14)
+    prog_len = u16(hdr, 16)
+    if autorun != 10 or basic_len != prog_len:
+        raise SystemExit('bad BASIC autostart/length')
+    if len(basic) != basic_len + 2 or basic[0] != 0xFF or not xor_ok(basic):
+        raise SystemExit('bad BASIC data record')
+
+    program = basic[1:-1]
+    loader_off = LOADER_ADDR - PROG
+    if program[loader_off:loader_off + len(loader)] != loader:
+        raise SystemExit('resident loader differs from assembled loader')
+    if loader_off + len(loader) >= len(program):
+        raise SystemExit('resident loader placement is invalid')
+
+    check_fast(parsed[2], screen, 'screen block')
+    check_fast(parsed[3], game, 'game block')
+
+    print(
+        f'TZX OK: {len(data)} bytes, blocks 11/11/19/19, '
+        f'ROM pilots {ROM_PILOTS[0]}/{ROM_PILOTS[1]}, '
+        f'fast leaders {FAST_PULSES}/{FAST_PULSES}, '
+        f'data {ZERO}/{ONE}, no pauses'
+    )
+
+
+if __name__ == '__main__':
+    main()
