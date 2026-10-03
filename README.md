@@ -54,13 +54,13 @@ The final TZX is independently parsed and must contain:
 - ROM pilot 1: **2824 pulses**;
 - ROM pilot 2: **2420 pulses**;
 - fast leader: **256 pulses at 1710 T-states each**;
-- fast headers stored as standard TZX turbo-data blocks (`0x11`), with payloads in pure-data blocks (`0x14`);
+- compact generalized-data encoding for the turbo stream (no expanded pulse-sequence payload);
 - turbo zero pulse: **855 T-states**;
 - turbo one pulse: **1710 T-states**;
 - no explicit pause blocks;
 - **0 ms** pause on every data block.
 
-The release TZX uses two equal pulses per bit, so each encoded zero pulse is 855 T-states and each encoded one pulse is 1710 T-states. The loader consumes both pulses before advancing to the next bit, which leaves enough processing room without a per-byte delay. `loader/tzx19to13.py` converts the host tool's generalized blocks into compact standard turbo (`0x11`), one-pulse tone (`0x12`), and pure-data (`0x14`) blocks. Its retained legacy path still shortens a leader across a whole contiguous `0x13` stream rather than only its first chunk. The turbo edition follows the same visible sequence as the standard tape: BASIC first, then the shared SCREEN$, then game bytes, then entry at 32768. Its payloads use the loader's direct-copy path so zero-gap transitions do not depend on decompression time.
+ZQLoader adds its normal 64-T-state end-of-byte delay to the final data pulse of each byte. `loader/tzx19to13.py` keeps the compact generalized-data stream and patches its fast leader in place; the legacy pulse-sequence path still shortens a leader across the whole contiguous stream rather than only its first chunk. The turbo edition follows the same visible sequence as the standard tape: BASIC first, then the shared SCREEN$, then game bytes, then entry at 32768. Its payloads use the loader's direct-copy path so zero-gap transitions do not depend on decompression time.
 
 ## Audio
 
@@ -99,7 +99,7 @@ The main program starts at `$8000`. Board pixels use `$E000-$F7FF`, board attrib
 
 ## Verification status
 
-Current status is emulator runtime-accepted. The clean Ubuntu workflow uses cycle-level ZX Spectrum 48K tape playback rather than instant-load shortcuts. It requires the standard TAP to reach the machine-code entry point and requires the exact release TZX to do so three times in succession with the zero-gap, short-leader format intact. The fast-tape checks also require the tape to reach its physical end before the entry point is accepted, so a loader that jumps early and then resumes reading cannot pass.
+Current status is emulator runtime-accepted. The clean Ubuntu workflow uses cycle-level ZX Spectrum 48K tape playback rather than instant-load shortcuts. It requires the standard TAP to reach the machine-code entry point and requires the fast TZX to do so three times in succession with the zero-gap, short-leader format intact.
 
 The run-time harness then exercises a deterministic live match long enough to see all four robot seats take turns, multiple strikes and pocket events, stable turn progression, a complete live-music loop, and clean screen state. It also injects and verifies all three sound modes, pause/freeze/resume, fast/normal switching, match restart, effects returning idle, and return to BASIC. A second live check starts from the fast-tape snapshot. These are emulator results only; no real-hardware claim is made.
 
