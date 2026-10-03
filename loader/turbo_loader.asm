@@ -1,6 +1,6 @@
 ; Fixed-sequence turbo loader for ZX Spectrum 48K.
 ; Loaded inside a BASIC REM line at a fixed address.
-; Sequence: loading screen, game, then CALL 32768.
+; Sequence: loading screen, game, then enter 32768 with a BASIC return route.
 ; Each fast data bit is one edge interval: zero 855 T, one 1710 T.
 
         ORG 0xFB00
@@ -22,7 +22,7 @@ loader_start:
         call load_block
         jr c,load_error
 
-        ld sp,0x7FF0
+        ld sp,0x7E00
         ld hl,0x7F00
         push hl
         jp 0x8000
@@ -32,7 +32,7 @@ load_error:
         ld a,2
         out (0xFE),a
         ei
-        jp 0
+        jp 0x7F00
 
 ; HL destination, IX payload byte count.
 ; Reads one fixed fast block, then verifies two rolling checksum bytes.

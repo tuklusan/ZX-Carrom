@@ -47,7 +47,7 @@ The fast TZX is small and has exactly four blocks:
 3. loading screen — compact generalized-data block `0x19`;
 4. game — compact generalized-data block `0x19`.
 
-The BASIC REM line contains a 32-byte bootstrap plus a padded copy of the fast decoder. The bootstrap, assembled from `loader/turbo_bootstrap.asm`, copies the decoder to uncontended RAM at `$FB00`, installs a three-byte return stub at `$7F00`, and jumps to the high copy. The decoder, assembled from `loader/turbo_loader.asm`, loads and checks the screen, loads and checks the game, installs the safe return address, then jumps to 32768. There is no next-block step after the game.
+The BASIC REM line contains a 37-byte bootstrap plus a padded copy of the fast decoder. The bootstrap, assembled from `loader/turbo_bootstrap.asm`, saves the original BASIC stack, uses a separate loader stack below `$7F00`, copies the decoder to uncontended RAM at `$FB00`, installs a four-byte return trampoline at `$7F00`, and jumps to the high copy. The decoder, assembled from `loader/turbo_loader.asm`, loads and checks the screen, loads and checks the game, stages that return trampoline, then jumps to 32768. There is no next-block step after the game.
 
 Fast-block requirements are:
 
@@ -88,7 +88,7 @@ The HUD counters are session totals for each pair. PTS rises when that pair pock
 
 ## Memory map
 
-The main program starts at `$8000`. Board pixels use `$E000-$F7FF`, board attributes `$F800-$FAFF`, the IM2 jump/vector area is `$FDFD/$FE00`, and the game stack is below `$FDF0`. The TZX auto-runs the resident bootstrap at 23784, copies the timing-critical decoder to `$FB00`, and puts its post-game reset stub at `$7F00`. The decoder is no longer needed once the game has started.
+The main program starts at `$8000`. Board pixels use `$E000-$F7FF`, board attributes `$F800-$FAFF`, the IM2 jump/vector area is `$FDFD/$FE00`, and the game stack is below `$FDF0`. The TZX auto-runs the resident bootstrap at 23784, copies the timing-critical decoder to `$FB00`, and puts its post-game BASIC return trampoline at `$7F00`. The decoder is no longer needed once the game has started.
 
 ## Project layout
 

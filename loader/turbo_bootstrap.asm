@@ -7,10 +7,11 @@ DECODER_DEST  EQU 0xFB00
 DECODER_BYTES EQU 512
 RETURN_STUB   EQU 0x7F00
 
-; 29 bytes — Copies the decoder and return stub into place, then gets out of the way.
+; 33 bytes — Copies the decoder and return stub into place, then gets out of the way.
 bootstrap_start:
         di
-        ld sp,0x7FF0
+        ld (reset_sp),sp        ; tuck BASIC's stack away before borrowing our own
+        ld sp,0x7E00
 
         ld hl,bootstrap_end
         ld de,DECODER_DEST
@@ -24,9 +25,11 @@ bootstrap_start:
 
         jp DECODER_DEST
 
-; 3 bytes — Tiny return trampoline; three bytes, one job, no drama.
+; 4 bytes — Restores BASIC's stack without pulling the big red reset lever.
 reset_stub:
-        jp 0
+        ld sp,0x0000
+reset_sp EQU reset_stub+1
+        ret
 reset_stub_end:
 
 bootstrap_end:
