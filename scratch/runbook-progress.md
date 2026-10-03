@@ -109,6 +109,7 @@ This ledger follows `scratch/review-fix-runbook.md` in order. PASS is used only 
 - Run 100 still failed at the unchanged production boundary assertion before focused tests could run. A temporary `pre_qsq` display was added immediately before the existing 256-byte alignment to measure the exact remaining byte deficit without changing the assertion or alignment.
 - Run 101 confirmed the same production boundary failure; the normalizer strips source display directives, so that probe emitted nothing. The inert probe is removed. A temporary workflow measurement now uses only a disposable normalized copy with its generated failure line neutralized, prints the boundary symbols, then still runs the untouched production build.
 - Run 102 stopped in the temporary measurement step because the normalizer had already renamed the generated dot-prefixed failure token, so the exact string replacement missed it. Production was not reached. The disposable measurement now neutralizes the generated failure line by its assertion text instead.
+- Run 103 measurement succeeded and confirmed `QSQ=C300`, `code_end=DDE6`, `vars_end=E1FF`, `BGBUF=E100`; the untouched production build then failed at the same boundary assertion. A zero-byte `pre_qsq` label is temporarily added immediately before the existing alignment so the next measurement can report the exact byte deficit.
 
 ## Fix group 2D — Session PTS by coin ownership
 **Status: NOT STARTED**
