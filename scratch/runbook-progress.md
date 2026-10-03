@@ -134,17 +134,19 @@ This ledger follows `scratch/review-fix-runbook.md` in order. PASS is used only 
 
 ## Phase 2 gate
 
-**Status: IN PROGRESS**
+**Status: PASS**
 
-- Current and earlier focused tests: PASS — run 108 passed player-map, Queen-history, pass-replay, extra-breaker, Queen-striker, Due-recovery, session-PTS, and resolver-matrix assembled checks.
-- Production build: PASS — two clean Pasmo production builds completed.
-- Validators: PASS — final TZX reported blocks 11/11/19/19, ROM pilots 2824/2420, fast leaders 256/256, data pulses 855/1710, 24831-byte game payload, and no pauses.
-- Runtime acceptance: PASS — three cycle-level loads reached PC 32768; four seats/logical players, turn flow, controls, live points, add/return/reset, groove/effects, phase/screen/loading checks, and quit-to-BASIC all passed. Emulator proof only.
-- Two clean builds and byte comparison: PASS — game binary, TZX, and release ZIP comparisons passed in run 108.
-- Restricted-vocabulary result: PASS — clean in run 108.
+- Current and earlier focused tests: PASS — authoritative run 109 passed player-map, Queen-history, pass-replay, extra-breaker, Queen-striker, Due-recovery, session-PTS, and resolver-matrix assembled checks.
+- Production build: PASS — two clean Pasmo production builds completed in run 109.
+- Validators: PASS — run 109 final TZX reported blocks 11/11/19/19, ROM pilots 2824/2420, fast leaders 256/256, data pulses 855/1710, 24831-byte game payload, and no pauses.
+- Runtime acceptance: PASS — run 109 completed three cycle-level loads to PC 32768; four seats/logical players, turn flow, controls, live points, add/return/reset, groove/effects, phase/screen/loading checks, and quit-to-BASIC all passed. Emulator proof only.
+- Two clean builds and byte comparison: PASS — game binary, TZX, and release ZIP comparisons passed in run 109.
+- Restricted-vocabulary result: PASS — clean in run 109.
 - Runner-state check immediately before checkpoint push: PASS — 0 queued, 0 running.
-- Checkpoint push: PENDING — this ledger commit is the Phase-2 checkpoint.
-- Authoritative workflow result: PENDING.
+- Checkpoint push: PASS — `bcf99b572e6f801551a0d919d3a0aef939294666`.
+- Authoritative workflow result: PASS — clean-build run 109 completed successfully.
+- Workflow release-refresh commit: PASS — `f6c6ff4c6f6aa15dca29564a15adb74f7bba12dc`.
+- Post-run runner state: PASS — 0 queued, 0 running.
 
 # Phase 3
 
