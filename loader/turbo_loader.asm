@@ -5,9 +5,9 @@
 
         ORG 23784
 
-PILOT_MIN   EQU 30
-SYNC_MIN    EQU 5
-BIT_SPLIT   EQU 27
+PILOT_MIN   EQU 20
+SYNC_MIN    EQU 3
+BIT_SPLIT   EQU 20
 
 loader_start:
         di
