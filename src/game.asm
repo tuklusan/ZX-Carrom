@@ -42,22 +42,19 @@ PHTAB:  dw ph_newboard,ph_think0,ph_think,ph_place,ph_hold,ph_aim,ph_move
         dw ph_resolve,ph_wait,ph_afterboard,ph_aftergame,ph_newmatch
 
 ; ---------------------------------------------------------------- match / game / board
-; 360 bytes — Starts matches, boards, and turns without asking for a committee.
+; 351 bytes — Starts matches, boards, and turns without asking for a committee.
 
 new_match:
         xor a
-        ld (games_won),a
-        ld (games_won+1),a
         ld (games_played),a
+        ld (gw),a
         ld c,4
         call rand_n
         ld (break_off),a        ; the toss: which seat breaks the first board
 new_game:
         xor a
-        ld (score),a
-        ld (score+1),a
-        ld (boards_won),a
-        ld (boards_won+1),a
+        ld (game_score),a
+        ld (game_score+1),a
         ld (boards_in_game),a
         ld a,PH_NEWBOARD
         ld (phase),a
@@ -546,7 +543,7 @@ ph_move:
         ret
 
 ; ---------------------------------------------------------------- the rules (ICF Laws, doubles)
-; 1872 bytes — Applies the Carrom rules, including the queen's impressive paperwork.
+; 1990 bytes — Applies the Carrom rules, including the queen's impressive paperwork.
 
 ph_resolve:
         ld a,(seat)
@@ -562,6 +559,7 @@ ph_resolve:
         ld (qa),a
         ld (rcont),a
         ld (rnewdue),a
+        ld (rgiven),a
         ld a,(pk_count)
         or a
         jr z,.counted
@@ -850,9 +848,7 @@ ph_resolve:
         xor a
         ld (qstate),a
         ld (qpend),a
-13:     xor a
-        ld (rgiven),a
-        ld a,(rcA)
+13:     ld a,(rcA)
         ld b,a
         add a,a
         add a,a
@@ -908,6 +904,7 @@ ph_resolve:
         ld hl,dues
         add hl,de
         ld (hl),b
+        call stats_stroke
         ; ---- the message and the turn
         call msg_clear
         ld a,(rS)
@@ -1316,12 +1313,13 @@ qc:     call pscore
         ret
 pscore: ld e,a
         ld d,0
-        ld hl,score
+        ld hl,game_score
         add hl,de
         ld a,(hl)
         ret
 
 finish_board:
+        call stats_stroke
         ld a,(rP)
         cp 13
         jr c,1F
@@ -1338,6 +1336,9 @@ finish_board:
         ld hl,boards_won
         add hl,de
         inc (hl)
+        ld a,(hl)
+        cp 100
+        call nc,stats_clear
         ld hl,boards_in_game
         inc (hl)
         xor a
@@ -1370,52 +1371,60 @@ finish_board:
 
 ; ICF 56, 57: a game is 25 points or eight boards; best of three games
 ph_afterboard:
-        ld a,(score)
+        ld a,(game_score)
         cp 25
         jr nc,.g
-        ld a,(score+1)
+        ld a,(game_score+1)
         cp 25
         jr nc,.g
         ld a,(boards_in_game)
         cp 8
         jr c,.nog
-        ld a,(score)
-        ld hl,score+1
+        ld a,(game_score)
+        ld hl,game_score+1
         cp (hl)
         jr nz,.g
 .nog:   ld a,PH_NEWBOARD
         ld (phase),a
         ret
-.g:     ld a,(score)
-        ld hl,score+1
+.g:     ld a,(game_score)
+        ld hl,game_score+1
         cp (hl)
         ld a,0
         jr nc,1F
         inc a
-1:      ld (gw),a
+1:      ld (rA),a
         ld e,a
         ld d,0
         ld hl,games_won
         add hl,de
         inc (hl)
+        ld a,(hl)
+        cp 100
+        call nc,stats_clear
         ld hl,games_played
         inc (hl)
-        call msg_clear
+        ld a,(rA)
+        or a
+        jr nz,2F
+        ld hl,gw
+        inc (hl)
+2:      call msg_clear
         ld hl,S_GAMEOVER
         call msg_s
         ld a,(games_played)
         call msg_n
         ld hl,S_TO
         call msg_s
-        ld a,(gw)
+        ld a,(rA)
         call msg_pair
         ld a,' '
         call msg_c
-        ld a,(score)
+        ld a,(game_score)
         call msg_n
         ld a,'-'
         call msg_c
-        ld a,(score+1)
+        ld a,(game_score+1)
         call msg_n
         call msg_show
         call hud
@@ -1427,10 +1436,12 @@ ph_afterboard:
         jp wait_then
 
 ph_aftergame:
-        ld a,(games_won)
+        ld a,(gw)
         cp 2
         jr nc,.m
-        ld a,(games_won+1)
+        ld b,a
+        ld a,(games_played)
+        sub b
         cp 2
         jr nc,.m
         call new_game
@@ -1438,7 +1449,7 @@ ph_aftergame:
 .m:     call msg_clear
         ld hl,S_MATCH
         call msg_s
-        ld a,(games_won)
+        ld a,(gw)
         cp 2
         ld a,0
         jr nc,1F
@@ -1446,11 +1457,13 @@ ph_aftergame:
 1:      call msg_pair
         ld a,' '
         call msg_c
-        ld a,(games_won)
+        ld a,(gw)
         call msg_n
         ld a,'-'
         call msg_c
-        ld a,(games_won+1)
+        ld a,(games_played)
+        ld hl,gw
+        sub (hl)
         call msg_n
         ld hl,S_STARS
         call msg_s
@@ -1462,8 +1475,72 @@ ph_aftergame:
         ld c,PH_NEWMATCH
         jp wait_then
 
+; Net session points follow coins into and back out of pockets; the abacus is merciless.
+stats_stroke:
+        ld a,(rn)
+        ld b,a
+        ld a,(rgiven)
+        cp b
+        ret z
+        ld c,a
+        ld a,(rA)
+        ld e,a
+        ld d,0
+        ld hl,score
+        add hl,de
+        ld a,c
+        cp b
+        jr c,.add
+        sub b
+        ld c,a
+        ld a,(hl)
+        sub c
+        jr nc,.store
+        add a,100
+        ld (hl),a
+        inc hl
+        inc hl
+        ld a,(hl)
+        or a
+        jr z,.zero
+        dec (hl)
+        ret
+.zero:  xor a
+        dec hl
+        dec hl
+        ld (hl),a
+        ret
+.add:   ld a,b
+        sub c
+        ld c,a
+        ld a,(hl)
+        add a,c
+        cp 100
+        jr c,.store
+        sub 100
+        ld (hl),a
+        inc hl
+        inc hl
+        inc (hl)
+        ld a,(hl)
+        cp 10
+        ret c
+        jp stats_clear
+.store: ld (hl),a
+        ret
+
+; 14 bytes — Wipes the public counters when one gets too ambitious.
+stats_clear:
+        xor a
+        ld hl,score
+        ld (hl),a
+        ld de,score+1
+        ld bc,7
+        ldir
+        ret
+
 ; ---------------------------------------------------------------- HUD
-; 379 bytes — Keeps scores and status readable while the coins cause trouble.
+; 390 bytes — Keeps scores and status readable while the coins cause trouble.
 ; Each corner is 6 character cells = 12 columns of the 64-column font:
 ;   row 1   RED (o)x9 DUE       name, coin colour, coins left, dues owed
 ;   row 2   PTS 125 (Q)         points this game (3 digits), queen covered
@@ -1529,9 +1606,25 @@ hud_pair:
         ld de,0x0200
         call hud_s
         ld a,(hp_p)
-        call pscore
-        ld de,0x0204
-        call hud_num3
+        ld e,a
+        ld d,0
+        ld hl,score
+        add hl,de
+        ld a,(hl)
+        push af
+        inc hl
+        inc hl
+        ld a,(hl)
+        or a
+        jr z,6F
+        add a,'0'
+        jr 7F
+6:      ld a,' '
+7:      ld de,0x0204
+        call hud_ch
+        pop af
+        ld de,0x0205
+        call hud_num2
         ld a,' '
         ld de,0x0207
         call hud_ch
@@ -1605,13 +1698,6 @@ hud_num2:
         call num_digits
         ld a,(nd_d+1)
         jr hud_dig2
-; A (0-255) right-aligned in three columns at D,E
-hud_num3:
-        call num_digits
-        ld a,(nd_d)
-        call hud_dig
-        inc e
-        ld a,(nd_d+1)
 hud_dig2:
         call hud_dig
         inc e

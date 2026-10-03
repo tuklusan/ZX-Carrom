@@ -379,20 +379,20 @@ S_BLU:      db "BLU",0
 S_BOARD:    db "BOARD ",0
 S_GAME:     db " GAME ",0
 S_DASH:     db " - ",0
-S_BREAKS:   db " BREAKS",0
-S_THINK:    db " THINKING",0
+S_BREAKS:   db " BREAK",0
+S_THINK:    db " THINKS",0
 S_PLACED:   db " AT ",0
-S_STRIKE:   db " STRIKING",0
-S_BRKFOUL:  db "BREAK FOUL - TURN PASSES",0
-S_BRKLOST:  db "3 MISSED BREAKS - TURN PASSES",0
-S_BRKAGAIN: db "BREAK MISSED - TRY AGAIN",0
-S_FOUL:     db "FOUL! STRIKER POCKETED",0
-S_QCOVER:   db "QUEEN COVERED BY ",0
-S_QPEND:    db "QUEEN IN - COVER HER!",0
-S_QRET:     db "QUEEN BACK TO CENTRE",0
-S_POCKETED: db "POCKETED ",0
-S_OPPCOIN:  db "OPPONENT'S COIN IN",0
-S_NOPOCKET: db "NOTHING POCKETED",0
+S_STRIKE:   db " SHOOTS",0
+S_BRKFOUL:  db "BREAK FOUL - NEXT",0
+S_BRKLOST:  db "3 MISSES - NEXT",0
+S_BRKAGAIN: db "BREAK - AGAIN",0
+S_FOUL:     db "STRIKER FOUL",0
+S_QCOVER:   db "QUEEN: ",0
+S_QPEND:    db "QUEEN - COVER!",0
+S_QRET:     db "QUEEN RETURNED",0
+S_POCKETED: db "IN: ",0
+S_OPPCOIN:  db "OPP COIN IN",0
+S_NOPOCKET: db "NO POCKET",0
 S_CONT:     db " - AGAIN",0
 S_PASS:     db " - NEXT",0
 S_COLON:    db ": ",0
@@ -401,23 +401,23 @@ S_PTS:      db " PTS",0
 S_GAMEOVER: db "GAME ",0
 S_TO:       db " TO ",0
 S_MATCH:    db "MATCH TO ",0
-S_STARS:    db " - NEW MATCH",0
-S_PAUSED:   db "** PAUSED - PRESS SPACE **",0
-S_PRESS:    db "PRESS ANY KEY",0
+S_STARS:    db " - NEW",0
+S_PAUSED:   db "PAUSED - SPACE",0
+S_PRESS:    db "PRESS KEY",0
 S_LOADBLANK: db "                ",0
 S_TITLE:    db "SANYALnet Labs  Carrom Arena",0
-S_SND0:     db "SOUND: MUSIC AND EFFECTS",0
-S_SND1:     db "SOUND: EFFECTS ONLY",0
+S_SND0:     db "SOUND: BOTH",0
+S_SND1:     db "SOUND: EFFECTS",0
 S_SND2:     db "SOUND OFF",0
 S_DUE:      db " DUE",0
 S_NODUE:    db "    ",0
 S_HPTS:     db "PTS ",0
 S_HGAMES:   db "GAMES  ",0
 S_HBOARDS:  db "BOARDS ",0
-S_AGG:      db "AGGRESSIVE",0
-S_BAL:      db "BALANCED",0
-S_DEF:      db "DEFENSIVE",0
-S_TRK:      db "TRICKSTER",0
+S_AGG:      db "ATTACK",0
+S_BAL:      db "BALANCE",0
+S_DEF:      db "DEFENCE",0
+S_TRK:      db "TRICK",0
 PROFNAMES:  dw S_AGG,S_BAL,S_DEF,S_TRK
 
         INCLUDE "tables.asm"
@@ -498,9 +498,10 @@ white_pair:     db 0
 break_off:      db 0
 games_played:   db 0
 boards_in_game: db 0
-score:          ds 2
-boards_won:     ds 2
-games_won:      ds 2
+score:          ds 4            ; session PTS: low 0-99 for both pairs, then hundreds
+boards_won:     ds 2            ; session board wins
+games_won:      ds 2            ; session game wins
+game_score:     ds 2            ; ICF score for the current game
 left:           ds 2
 dues:           ds 2
 had:            ds 2
