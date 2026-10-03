@@ -77,15 +77,21 @@ def main():
     if (standard_build / 'loading.scr').read_bytes() != (FROZEN / 'loading.scr').read_bytes():
         raise SystemExit('loading screen differs from locked tape input')
 
+    fast_bootstrap = BUILD / 'turbo_bootstrap.bin'
+    fast_bootstrap_sym = BUILD / 'turbo_bootstrap.sym'
+    run(pasmo, '--bin', '--pass3', LOADER / 'turbo_bootstrap.asm', fast_bootstrap, fast_bootstrap_sym)
+
     fast_loader = BUILD / 'turbo_loader.bin'
     fast_loader_sym = BUILD / 'turbo_loader.sym'
     run(pasmo, '--bin', '--pass3', LOADER / 'turbo_loader.asm', fast_loader, fast_loader_sym)
     run(sys.executable, TOOLS / 'build_fast_tzx.py',
+        '--bootstrap', fast_bootstrap,
         '--loader', fast_loader,
         '--screen', FROZEN / 'loading.scr',
         '--game', FROZEN / 'game.bin',
         '--out', DIST / 'carrom_fast.tzx')
     run(sys.executable, TOOLS / 'validate_tzx.py', DIST / 'carrom_fast.tzx',
+        '--bootstrap', fast_bootstrap,
         '--loader', fast_loader,
         '--screen', FROZEN / 'loading.scr',
         '--game', FROZEN / 'game.bin')

@@ -3,7 +3,7 @@
 ; Sequence: loading screen, game, then CALL 32768.
 ; Each fast data bit is one edge interval: zero 855 T, one 1710 T.
 
-        ORG 23784
+        ORG 0xFB00
 
 PILOT_MIN   EQU 20
 SYNC_MIN    EQU 3
@@ -11,7 +11,6 @@ BIT_SPLIT   EQU 20
 
 loader_start:
         di
-        ld sp,0x7FF0
         ld hl,0x4000
         ld ix,6912
         call load_block
@@ -22,9 +21,10 @@ loader_start:
         call load_block
         jr c,load_error
 
-        ei
-        call 0x8000
-        jp 0
+        ld sp,0x7FF0
+        ld hl,0x7F00
+        push hl
+        jp 0x8000
 
 load_error:
         ld a,2

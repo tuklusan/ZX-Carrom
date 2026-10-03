@@ -14,6 +14,7 @@ ONE = 1710
 ROM_PILOTS = (2824, 2420)
 FAST_PILOT = 1710
 FAST_PULSES = 256
+DECODER_BYTES = 512
 MAX_SIZE = 40000
 
 
@@ -156,12 +157,14 @@ def check_fast(block, expected, label):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('tzx')
+    ap.add_argument('--bootstrap', required=True)
     ap.add_argument('--loader', required=True)
     ap.add_argument('--screen', required=True)
     ap.add_argument('--game', required=True)
     a = ap.parse_args()
 
     data = Path(a.tzx).read_bytes()
+    bootstrap = Path(a.bootstrap).read_bytes()
     loader = Path(a.loader).read_bytes()
     screen = Path(a.screen).read_bytes()
     game = Path(a.game).read_bytes()
@@ -210,9 +213,12 @@ def main():
 
     program = basic[1:-1]
     loader_off = LOADER_ADDR - PROG
-    if program[loader_off:loader_off + len(loader)] != loader:
-        raise SystemExit('resident loader differs from assembled loader')
-    if loader_off + len(loader) >= len(program):
+    if len(loader) > DECODER_BYTES:
+        raise SystemExit('fast decoder is larger than its resident copy slot')
+    resident = bootstrap + loader + bytes(DECODER_BYTES - len(loader))
+    if program[loader_off:loader_off + len(resident)] != resident:
+        raise SystemExit('resident bootstrap/decoder bytes differ from assembled files')
+    if loader_off + len(resident) >= len(program):
         raise SystemExit('resident loader placement is invalid')
 
     check_fast(parsed[2], screen, 'screen block')
