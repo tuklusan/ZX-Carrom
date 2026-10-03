@@ -970,6 +970,7 @@ ph_resolve:
         ld a,(rcA)
         xor 1                    ; settle the other colour's old Due first
         ld c,0
+due_other_call:
         call return_colour
         ld c,0
         ld a,(rS)
@@ -1111,16 +1112,7 @@ return_colour:
         ld hl,dues
         add hl,de
         ld a,(hl)
-        add a,c
-        ld b,a                   ; wanted = forced + Due
-        ld hl,left
-        add hl,de
-        ld a,9
-        sub (hl)                 ; this colour's coins in pockets
-        cp b
-        jr nc,1F
-        ld b,a
-1:      ld a,b
+        add a,c                  ; wanted = forced + Due
         ld (rgive),a
         ld a,(r_b)
         ld b,a
@@ -1172,10 +1164,8 @@ return_colour:
         ld hl,dues
         add hl,de
         ld a,(hl)
-        sub b
-        jr nc,4F
-        xor a
-4:      ld (hl),a
+        sub b                    ; B cannot exceed this Due: returns stop at wanted
+        ld (hl),a
         ld hl,rret
         add hl,de
         ld a,(rgiven)
