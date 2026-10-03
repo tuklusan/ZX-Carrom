@@ -54,7 +54,6 @@ jobs:
           PASMO: /tmp/pasmo/pasmo
         run: |
           python3 build.py
-          python3 tools/package_release.py dist/zx-carrom.zip
           mkdir -p /tmp/build1
           cp build/carrom.bin dist/carrom_fast.tzx dist/zx-carrom.zip /tmp/build1/
 
@@ -63,7 +62,6 @@ jobs:
           PASMO: /tmp/pasmo/pasmo
         run: |
           python3 build.py
-          python3 tools/package_release.py dist/zx-carrom.zip
           cmp /tmp/build1/carrom.bin build/carrom.bin
           cmp /tmp/build1/carrom_fast.tzx dist/carrom_fast.tzx
           cmp /tmp/build1/zx-carrom.zip dist/zx-carrom.zip

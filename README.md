@@ -38,7 +38,7 @@ A successful build creates the sole tape release:
 
 - `dist/carrom_fast.tzx` — compact turbo TZX.
 
-`tools/package_release.py dist/zx-carrom.zip` makes the deterministic source-plus-release archive and excludes TAP files. No WAV release artifact is produced.
+`python3 build.py` creates both `dist/carrom_fast.tzx` and the deterministic source-plus-release `dist/zx-carrom.zip`. The ZIP excludes TAP files. No WAV release artifact is produced.
 
 The fast TZX is deliberately fixed and small. It contains exactly four blocks:
 

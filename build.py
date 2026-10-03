@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build Carrom Arena ZX with Pasmo and emit the validated TZX release."""
+"""Build Carrom Arena ZX with Pasmo and emit the validated TZX and release ZIP."""
 from pathlib import Path
 import argparse, hashlib, os, shutil, subprocess, sys
 
@@ -40,7 +40,7 @@ def clean_outputs():
     shutil.rmtree(BUILD, ignore_errors=True)
     BUILD.mkdir(parents=True)
     DIST.mkdir(exist_ok=True)
-    for name in ('carrom.tap', 'carrom_fast.tzx'):
+    for name in ('carrom.tap', 'carrom_fast.tzx', 'zx-carrom.zip'):
         try:
             (DIST / name).unlink()
         except FileNotFoundError:
@@ -94,7 +94,9 @@ def main():
         '--loader', fast_loader,
         '--screen', loading_screen,
         '--game', binfile)
-    print('built and validated:', DIST / 'carrom_fast.tzx')
+    release_zip = DIST / 'zx-carrom.zip'
+    run(sys.executable, TOOLS / 'package_release.py', release_zip)
+    print('built and validated:', DIST / 'carrom_fast.tzx', release_zip)
 
 
 if __name__ == '__main__':
