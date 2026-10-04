@@ -289,16 +289,15 @@ seat_for_player:
 ; With four slots, finding 0,1,2,3 proves there can be no duplicate or stray value.
 validate_player_map:
         xor a
-1:      push af
+1:      ld b,a
+        push bc
         call seat_for_player
-        jr c,2F
-        pop af
+        pop bc
+        ret c
+        ld a,b
         inc a
         cp 4
         jr c,1B
-        ret
-2:      pop af
-        scf
         ret
 
 ; Every logical player moves one physical seat clockwise between games.

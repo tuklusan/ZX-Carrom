@@ -168,6 +168,7 @@ This ledger follows `scratch/review-fix-runbook.md` in order. PASS is used only 
 - Repair in this checkpoint: compute `128 mod C`, reject the incomplete high tail, then reduce only accepted source values. The routine still takes nonzero C and preserves deterministic seeded behavior.
 - Boundary packing: the unbiased routine is 11 bytes larger. Exactly 11 bytes are recovered before the fixed QSQ page boundary by looping the player-map validator, tail-jumping `draw_board`, removing the documented dead `recompute` load, using `xor a` for striker clearing, and folding the friction carry clear into `xor a`. No table, variable, or boundary invariant is moved.
 - Focused assembled/static coverage added for divisors 4, 7, 9, 11, 13, and 24, a synthetic 0..127 source cycle, rejected-tail redraw, deterministic seeded repetition, range checks, equal accepted buckets, and the nonzero-divisor call-site precondition. Execution evidence pending workflow.
+- Run 111 stopped at assembly because this Pasmo build does not accept the sign condition on a relative branch. The retry branch is changed to the supported absolute conditional jump. Its extra byte is recovered by tightening the player-map validator loop while preserving carry and the exact QSQ boundary.
 
 ## Fix group 3C — Dependable production boundary failure
 **Status: NOT STARTED**

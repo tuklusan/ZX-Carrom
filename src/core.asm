@@ -355,7 +355,7 @@ rand_n:
         ld a,l
         and 127
         add a,b
-        jr m,.retry              ; source >= 128-tail: draw again
+        jp m,.retry              ; source >= 128-tail: draw again
         sub b                    ; restore the accepted source value
 .reduce:
         cp c
