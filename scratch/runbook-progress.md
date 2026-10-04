@@ -151,7 +151,13 @@ This ledger follows `scratch/review-fix-runbook.md` in order. PASS is used only 
 # Phase 3
 
 ## Fix group 3A — Legal striker fallback
-**Status: NOT STARTED**
+**Status: IN PROGRESS**
+
+- Affected files: `src/game.asm`, `src/tables.asm`, `tools/test_striker_fallback.py`, workflow hook, ledger.
+- Reproduction: the second fallback tier ended at `.mid`, forced `plan_u=0`, called `place_xy`, and committed velocity without calling `strike_legal`; a coin overlapping the centre baseline could therefore receive an illegal striker placement.
+- Repair: replace the unchecked centre commitment with `fallback_legal`, a deterministic exhaustive scan of half-pixel baseline centres -28..28. A legal point is doubled into `plan_u`; if every point is blocked, the turn is explicitly passed and carry prevents `PH_PLACE` from being committed. `set_velocity` now guarantees carry-clear on every successful plan.
+- Layout: the fallback scanner is packed into ROWLO's existing alignment padding. The adjacent Phase-2 PTS wrapper is reduced equivalently using `LD BC,(rn)` plus a conditional swap, so the alignment and payload boundary remain unchanged.
+- Focused assembled coverage: centre blocked/non-centre legal, centre as the only legal point, ordinary targetable fallback with finite velocity, every baseline point blocked with explicit pass/no velocity commitment, old-centre overlap rejection, and a controlled old-behaviour fixture. Execution evidence pending workflow.
 
 ## Fix group 3B — Unbiased bounded random reduction
 **Status: NOT STARTED**

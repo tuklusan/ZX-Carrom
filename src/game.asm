@@ -393,6 +393,7 @@ ph_think:
         or a
         ret nz
         call ai_finish
+        ret c                    ; no legal striker placement: pass path already scheduled
         ld a,PH_PLACE
         ld (phase),a
         ret
@@ -3014,6 +3015,7 @@ set_velocity:
         ld hl,(fc_uy)
         call ucomp
         ld (aim_sy),hl
+        or a                     ; every committed plan returns with carry clear
         ret
 vcomp:  ld a,h
         ld (sd_sign),a
@@ -3122,8 +3124,8 @@ plan_fallback:
         inc a
         ld (fb_tier),a
         jp .tier
-.mid:   xor a
-        ld (plan_u),a
+.mid:   call fallback_legal
+        ret c                    ; every legal baseline point was blocked
         call place_xy
         ld hl,128*16
         ld (fc_gx),hl

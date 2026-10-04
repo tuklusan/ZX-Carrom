@@ -256,25 +256,41 @@ ROWLO:
     db 128,128,128,128,128,128,128,128,160,160,160,160,160,160,160,160
     db 192,192,192,192,192,192,192,192,224,224,224,224,224,224,224,224
 
-; 40 bytes — Public PTS accounting lives in ROWLO's otherwise unused tail padding.
+; 63 bytes — Legal fallback search plus public PTS helpers share ROWLO's tail padding.
+; Search every permitted half-pixel baseline centre from left to right.
+fallback_legal:
+        ld a,-28
+1:      push af
+        call strike_legal
+        jr nc,2F
+        pop af
+        inc a
+        cp 29
+        jr nz,1B
+        ld hl,S_PASS
+        call turn_pass
+        scf
+        ret
+2:      pop af
+        add a,a
+        ld (plan_u),a
+        or a
+        ret
+
 stats_board:
-        xor a
-        ld (rret),a
-        ld (rret+1),a
+        ld hl,0
+        ld (rret),hl
         jp stats_stroke
 
 stats_stroke:
-        ld a,(rn)
-        ld b,a
-        ld a,(rm)
-        ld c,a
+        ld bc,(rn)               ; C=own, B=opponent
         ld a,(rcA)
         or a
-        jr z,1F
+        jr nz,3F
         ld a,b
         ld b,c
-        ld c,a
-1:      push bc
+        ld c,a                   ; B=white pockets, C=black pockets
+3:      push bc
         xor a
         call stats_colour
         pop bc
