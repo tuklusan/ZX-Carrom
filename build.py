@@ -62,6 +62,7 @@ def main():
     binfile = BUILD / 'carrom.bin'
     sym = BUILD / 'carrom.sym'
     run(pasmo, '--bin', '--pass3', flat, binfile, sym)
+    run(sys.executable, TOOLS / 'check_boundary.py', sym)
     game_size = binfile.stat().st_size
     if game_size <= 0:
         raise SystemExit('game binary is empty')

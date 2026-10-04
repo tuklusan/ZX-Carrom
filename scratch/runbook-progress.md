@@ -161,7 +161,7 @@ This ledger follows `scratch/review-fix-runbook.md` in order. PASS is used only 
 - Final evidence: clean-build run 110 passed the striker-fallback assembled checks together with all Phase-1/2 focused checks. Both clean production builds reproduced byte-for-byte, final TZX validation retained the accepted pilots/leaders/data timings and zero pauses, three cycle-level loads reached PC 32768, full runtime/control/audio/counter checks passed, quit-to-BASIC passed, and the vocabulary gate was clean. Emulator proof only.
 
 ## Fix group 3B — Unbiased bounded random reduction
-**Status: IN PROGRESS**
+**Status: PASS**
 
 - Affected files: `src/core.asm`, `src/game.asm`, `tools/test_random_bounds.py`, workflow hook, ledger.
 - Reproduction: `rand_n` reduced every 0..127 source value modulo C, so divisors that do not divide 128 over-weighted low buckets.
@@ -171,9 +171,15 @@ This ledger follows `scratch/review-fix-runbook.md` in order. PASS is used only 
 - Run 111 stopped at assembly because this Pasmo build does not accept the sign condition on a relative branch. The retry branch is changed to the supported absolute conditional jump. Its extra byte is recovered by tightening the player-map validator loop while preserving carry and the exact QSQ boundary.
 - Run 112 built twice and all earlier focused checks passed, but the new random test stopped before executing because its source parser counted profile literals rather than profile bytes. The parser now extracts the four explicit jitter-radius fields directly; production code is unchanged.
 - Run 113 again built twice and passed every earlier focused check. The new test then read the wrong simulator register slot for A, producing a false range failure at C=4. It now uses the simulator's exported A register index; production code is unchanged.
+- Final evidence: clean-build run 114 passed `random-bounds assembled checks` and every earlier focused check. Both clean builds were byte-identical; final TZX validation retained ROM pilots 2824/2420, 256-pulse leaders, 855/1710 data timing, the 24831-byte payload, and no pauses. Three cycle-level loads, full runtime/control/audio/counter checks, quit-to-BASIC, and the vocabulary gate passed. Emulator proof only.
 
 ## Fix group 3C — Dependable production boundary failure
-**Status: NOT STARTED**
+**Status: IN PROGRESS**
+
+- Affected files: `build.py`, `tools/prepare_pasmo.py`, `tools/check_boundary.py`, `tools/test_boundary_guard.py`, workflow hook, ledger.
+- Reproduction: the source invariant was translated to a dot-prefixed error token; earlier Phase-2 boundary failures proved this produced assembler syntax errors rather than a dependable explicit production guard.
+- Repair in this checkpoint: retain `ASSERT vars_end < BGBUF` in source, strip only that source directive during deterministic Pasmo normalization, and immediately enforce the strict ordering from Pasmo's generated symbol file before any release packaging proceeds. Any other future source assertion is rejected by the normalizer until it has an explicit dependable guard.
+- Focused production-path test added: verify the normal built symbols pass, then assemble disposable source copies whose variable tail is grown exactly to equality and one byte beyond; the same boundary checker invoked by `build.py` must fail nonzero for both. Execution evidence pending workflow.
 
 ## Fix group 3D — Subpixel-safe returned-coin placement
 **Status: NOT STARTED**
