@@ -5,7 +5,7 @@ import re
 
 from skoolkit import CSimulator
 from skoolkit.snapshot import Snapshot
-from skoolkit.simutils import from_snapshot, B, C, SP, PC
+from skoolkit.simutils import from_snapshot, A, C, SP, PC
 from skoolkit.trace import Tracer
 
 
@@ -81,7 +81,7 @@ def main():
         tracer.run(sym['rand_n'], sentinel, 0, max_tstates, False,
                    None, None, None, None, '$', '02X', '04X')
         check(regs[PC] == sentinel, f'rand_n did not return for C={divisor}')
-        return regs[1] & 255  # A
+        return regs[A] & 255
 
     # Same seed and divisor must produce the same bounded sequence.
     for divisor in DIVISORS:

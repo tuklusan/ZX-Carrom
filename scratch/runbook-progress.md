@@ -170,6 +170,7 @@ This ledger follows `scratch/review-fix-runbook.md` in order. PASS is used only 
 - Focused assembled/static coverage added for divisors 4, 7, 9, 11, 13, and 24, a synthetic 0..127 source cycle, rejected-tail redraw, deterministic seeded repetition, range checks, equal accepted buckets, and the nonzero-divisor call-site precondition. Execution evidence pending workflow.
 - Run 111 stopped at assembly because this Pasmo build does not accept the sign condition on a relative branch. The retry branch is changed to the supported absolute conditional jump. Its extra byte is recovered by tightening the player-map validator loop while preserving carry and the exact QSQ boundary.
 - Run 112 built twice and all earlier focused checks passed, but the new random test stopped before executing because its source parser counted profile literals rather than profile bytes. The parser now extracts the four explicit jitter-radius fields directly; production code is unchanged.
+- Run 113 again built twice and passed every earlier focused check. The new test then read the wrong simulator register slot for A, producing a false range failure at C=4. It now uses the simulator's exported A register index; production code is unchanged.
 
 ## Fix group 3C — Dependable production boundary failure
 **Status: NOT STARTED**
