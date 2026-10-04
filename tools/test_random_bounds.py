@@ -46,11 +46,15 @@ def main():
     m = re.search(r'PROFILES:\s*(.*?)PF_WC', source, re.S)
     if not m:
         raise SystemExit('random-bounds check failed: profile table not found')
-    nums = [int(x) for x in re.findall(r'\b\d+\b', m.group(1))]
-    # Four eight-byte profiles; the last byte is jitter radius, so C=2*r+1.
-    if len(nums) < 32:
+    jitters = [
+        int(x) for x in re.findall(
+            r'db\s+[^\n]+\s*\n\s*dw\s+[^\n]+\s*\n\s*db\s+[^,\n]+,[^,\n]+,(\d+)',
+            m.group(1), re.I
+        )
+    ]
+    if len(jitters) != 4:
         raise SystemExit('random-bounds check failed: profile table is incomplete')
-    dynamic = {2 * nums[i + 7] + 1 for i in range(0, 32, 8)}
+    dynamic = {2 * radius + 1 for radius in jitters}
     used = literal | dynamic
     if used != set(DIVISORS) or 0 in used:
         raise SystemExit(f'random-bounds check failed: call-site divisors are {sorted(used)}')
