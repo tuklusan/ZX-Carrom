@@ -151,16 +151,23 @@ This ledger follows `scratch/review-fix-runbook.md` in order. PASS is used only 
 # Phase 3
 
 ## Fix group 3A — Legal striker fallback
-**Status: IN PROGRESS**
+**Status: PASS**
 
 - Affected files: `src/game.asm`, `src/tables.asm`, `tools/test_striker_fallback.py`, workflow hook, ledger.
 - Reproduction: the second fallback tier ended at `.mid`, forced `plan_u=0`, called `place_xy`, and committed velocity without calling `strike_legal`; a coin overlapping the centre baseline could therefore receive an illegal striker placement.
 - Repair: replace the unchecked centre commitment with `fallback_legal`, a deterministic exhaustive scan of half-pixel baseline centres -28..28. A legal point is doubled into `plan_u`; if every point is blocked, the turn is explicitly passed and carry prevents `PH_PLACE` from being committed. `set_velocity` now guarantees carry-clear on every successful plan.
 - Layout: the fallback scanner is packed into ROWLO's existing alignment padding. The adjacent Phase-2 PTS wrapper is reduced equivalently using `LD BC,(rn)` plus a conditional swap, so the alignment and payload boundary remain unchanged.
 - Focused assembled coverage: centre blocked/non-centre legal, centre as the only legal point, ordinary targetable fallback with finite velocity, every baseline point blocked with explicit pass/no velocity commitment, old-centre overlap rejection, and a controlled old-behaviour fixture. Execution evidence pending workflow.
+- Final evidence: clean-build run 110 passed the striker-fallback assembled checks together with all Phase-1/2 focused checks. Both clean production builds reproduced byte-for-byte, final TZX validation retained the accepted pilots/leaders/data timings and zero pauses, three cycle-level loads reached PC 32768, full runtime/control/audio/counter checks passed, quit-to-BASIC passed, and the vocabulary gate was clean. Emulator proof only.
 
 ## Fix group 3B — Unbiased bounded random reduction
-**Status: NOT STARTED**
+**Status: IN PROGRESS**
+
+- Affected files: `src/core.asm`, `src/game.asm`, `tools/test_random_bounds.py`, workflow hook, ledger.
+- Reproduction: `rand_n` reduced every 0..127 source value modulo C, so divisors that do not divide 128 over-weighted low buckets.
+- Repair in this checkpoint: compute `128 mod C`, reject the incomplete high tail, then reduce only accepted source values. The routine still takes nonzero C and preserves deterministic seeded behavior.
+- Boundary packing: the unbiased routine is 11 bytes larger. Exactly 11 bytes are recovered before the fixed QSQ page boundary by looping the player-map validator, tail-jumping `draw_board`, removing the documented dead `recompute` load, using `xor a` for striker clearing, and folding the friction carry clear into `xor a`. No table, variable, or boundary invariant is moved.
+- Focused assembled/static coverage added for divisors 4, 7, 9, 11, 13, and 24, a synthetic 0..127 source cycle, rejected-tail redraw, deterministic seeded repetition, range checks, equal accepted buckets, and the nonzero-divisor call-site precondition. Execution evidence pending workflow.
 
 ## Fix group 3C — Dependable production boundary failure
 **Status: NOT STARTED**

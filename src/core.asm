@@ -345,15 +345,23 @@ rand:
         ld (seed),hl
         ret
 
-; A = random 0..C-1 (C<=128). Clobbers HL, B.
+; A = unbiased random 0..C-1 from the 0..127 source range. C must be nonzero.
+; Reject the incomplete high bucket before reducing; clobbers HL, B.
 rand_n:
-        call rand
+        ld hl,128
+        call div16_8             ; A = 128 mod C
+        ld b,a                   ; size of the rejected tail
+.retry: call rand
         ld a,l
         and 127
-1:      cp c
+        add a,b
+        jr m,.retry              ; source >= 128-tail: draw again
+        sub b                    ; restore the accepted source value
+.reduce:
+        cp c
         ret c
         sub c
-        jr 1B
+        jr .reduce
 
 ; ---------------------------------------------------------------- screen
 ; 93 bytes — Finds screen rows, restores the board, and flips individual pixels.
@@ -372,8 +380,7 @@ draw_board:
         ld de,0x4000
         ld bc,6912
         ldir
-        call draw_title64
-        ret
+        jp draw_title64
 
 ; restore just the board pixels (wipes every piece) and forget what was drawn
 reset_board_pixels:
@@ -2094,7 +2101,6 @@ recompute:
         sbc hl,de           ; 7/8 max
         ex de,hl
         ld hl,(rc_ax)
-        ld a,l
         ld hl,(rc_ay)
         ; min = (ax+ay) - max
         push de
@@ -2138,8 +2144,7 @@ recompute:
 ; HL = ACC * HL / rc_s for 0 <= HL <= rc_s, via q = 128*HL/s
 fric_comp:
         ld bc,(rc_s)
-        ld a,0
-        or a
+        xor a
         sbc hl,bc
         jr nc,1F
         add hl,bc

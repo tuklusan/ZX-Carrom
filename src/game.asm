@@ -175,7 +175,7 @@ setup_board:
         ld a,b
         cp NB
         jr c,.lp
-        ld a,0
+        xor a
         ld (BODIES+STRIKER*BSZ+BF),a
         ; ICF 41: the formation, turned by a random angle
         ld c,24
@@ -289,16 +289,16 @@ seat_for_player:
 ; With four slots, finding 0,1,2,3 proves there can be no duplicate or stray value.
 validate_player_map:
         xor a
+1:      push af
         call seat_for_player
-        ret c
-        ld a,1
-        call seat_for_player
-        ret c
-        ld a,2
-        call seat_for_player
-        ret c
-        ld a,3
-        call seat_for_player
+        jr c,2F
+        pop af
+        inc a
+        cp 4
+        jr c,1B
+        ret
+2:      pop af
+        scf
         ret
 
 ; Every logical player moves one physical seat clockwise between games.
