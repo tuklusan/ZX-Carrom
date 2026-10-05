@@ -1,0 +1,56 @@
+name: Publish TZX to Itch.io
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version label shown on itch.io
+        required: true
+        default: '1.0.0'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zx-carrom-itch-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check release file
+        run: |
+          set -euo pipefail
+          test -s dist/zxcarrom.tzx
+          count="$(find dist -maxdepth 1 -type f | wc -l)"
+          if [ "$count" -ne 1 ]; then
+            echo "Expected exactly one release file in dist/, found $count." >&2
+            exit 1
+          fi
+
+      - name: Install Butler
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/butler"
+          curl --fail --location --silent --show-error             https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default             --output "$RUNNER_TEMP/butler.zip"
+          unzip -q "$RUNNER_TEMP/butler.zip" -d "$RUNNER_TEMP/butler"
+          chmod +x "$RUNNER_TEMP/butler/butler"
+          echo "$RUNNER_TEMP/butler" >> "$GITHUB_PATH"
+
+      - name: Publish ZX CARROM
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_CREDENTIALS }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BUTLER_API_KEY:-}" ]; then
+            echo "Missing BUTLER_CREDENTIALS repository secret." >&2
+            exit 1
+          fi
+          echo "::add-mask::$BUTLER_API_KEY"
+          butler version
+          butler push dist/zxcarrom.tzx tuklusan/zx-carrom:zx-spectrum-48k --userversion "$VERSION"
