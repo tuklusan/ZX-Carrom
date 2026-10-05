@@ -1,0 +1,26 @@
+ZX-Carrom 1.0.0 — minimal source build
+
+Requirements:
+- Linux
+- Python 3
+- Pasmo built from:
+  https://github.com/tuklusan/pasmo
+
+Put the Pasmo executable on PATH, or set:
+
+  export PASMO=/path/to/pasmo
+
+From this directory run:
+
+  python3 build.py
+
+Successful output:
+
+  dist/zxcarrom.tzx
+
+The dist/ file is the tracked release artifact. A normal build replaces it
+from current source. Intermediate files are written under build/.
+
+No prebuilt game, loader, loading screen, or tape image is required to build.
+The loading screen, game binary, bootstrap, loader and final TZX are built
+from the files in this repository.
