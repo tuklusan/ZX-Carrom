@@ -8,9 +8,6 @@ on:
         required: true
         default: '1.0.0'
         type: string
-  workflow_run:
-    workflows: ["build-dist"]
-    types: [completed]
 
 permissions:
   contents: read
@@ -21,19 +18,9 @@ concurrency:
 
 jobs:
   publish:
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      (
-        github.event_name == 'workflow_run' &&
-        github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.head_branch == 'main' &&
-        github.event.workflow_run.head_commit.message == 'Publish ZX CARROM to itch.io'
-      )
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Check release file
         run: |
@@ -59,7 +46,7 @@ jobs:
       - name: Publish ZX CARROM
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_CREDENTIALS }}
-          VERSION: ${{ inputs.version || '1.0.0' }}
+          VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
           if [ -z "${BUTLER_API_KEY:-}" ]; then
