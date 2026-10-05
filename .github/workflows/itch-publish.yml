@@ -8,6 +8,9 @@ on:
         required: true
         default: '1.0.0'
         type: string
+  workflow_run:
+    workflows: ["build-dist"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -18,9 +21,19 @@ concurrency:
 
 jobs:
   publish:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.head_commit.message == 'Publish ZX CARROM to itch.io'
+      )
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Check release file
         run: |
@@ -36,7 +49,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/butler"
-          curl --fail --location --silent --show-error             https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default             --output "$RUNNER_TEMP/butler.zip"
+          curl --fail --location --silent --show-error \
+            https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default \
+            --output "$RUNNER_TEMP/butler.zip"
           unzip -q "$RUNNER_TEMP/butler.zip" -d "$RUNNER_TEMP/butler"
           chmod +x "$RUNNER_TEMP/butler/butler"
           echo "$RUNNER_TEMP/butler" >> "$GITHUB_PATH"
@@ -44,7 +59,7 @@ jobs:
       - name: Publish ZX CARROM
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_CREDENTIALS }}
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ inputs.version || '1.0.0' }}
         run: |
           set -euo pipefail
           if [ -z "${BUTLER_API_KEY:-}" ]; then
